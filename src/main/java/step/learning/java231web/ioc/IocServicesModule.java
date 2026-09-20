@@ -1,6 +1,8 @@
 package step.learning.java231web.ioc;
 
 import com.google.inject.AbstractModule;
+import step.learning.java231web.services.db.IDbService;
+import step.learning.java231web.services.db.MySqlDbService;
 import step.learning.java231web.services.hash.IHashService;
 import step.learning.java231web.services.hash.Md5HashService;
 import step.learning.java231web.services.time.ITimeService;
@@ -23,6 +25,9 @@ public class IocServicesModule extends AbstractModule {
 
         bind( ITimestampService.class )
                 .to( SystemTimeService.class );
+
+        bind( IDbService.class )
+                .to( MySqlDbService.class );
     }
     
 }
