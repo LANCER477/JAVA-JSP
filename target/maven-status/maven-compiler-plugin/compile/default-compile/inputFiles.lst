@@ -1,3 +1,4 @@
+C:\Users\maksi\Downloads\java231web-master\src\main\java\step\learning\java231web\dao\UserDao.java
 C:\Users\maksi\Downloads\java231web-master\src\main\java\step\learning\java231web\filters\AuthFilter.java
 C:\Users\maksi\Downloads\java231web-master\src\main\java\step\learning\java231web\filters\CorsFilter.java
 C:\Users\maksi\Downloads\java231web-master\src\main\java\step\learning\java231web\filters\EncodingFilter.java
@@ -5,6 +6,7 @@ C:\Users\maksi\Downloads\java231web-master\src\main\java\step\learning\java231we
 C:\Users\maksi\Downloads\java231web-master\src\main\java\step\learning\java231web\ioc\IocServicesModule.java
 C:\Users\maksi\Downloads\java231web-master\src\main\java\step\learning\java231web\ioc\IocServletsModule.java
 C:\Users\maksi\Downloads\java231web-master\src\main\java\step\learning\java231web\JakartaRestConfiguration.java
+C:\Users\maksi\Downloads\java231web-master\src\main\java\step\learning\java231web\models\UserSignupFormModel.java
 C:\Users\maksi\Downloads\java231web-master\src\main\java\step\learning\java231web\resources\JakartaEE11Resource.java
 C:\Users\maksi\Downloads\java231web-master\src\main\java\step\learning\java231web\services\db\IDbService.java
 C:\Users\maksi\Downloads\java231web-master\src\main\java\step\learning\java231web\services\db\MySqlDbService.java

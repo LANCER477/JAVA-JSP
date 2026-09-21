@@ -1,7 +1,9 @@
 step\learning\java231web\JakartaRestConfiguration.class
 step\learning\java231web\services\hash\IHashService.class
+step\learning\java231web\dao\UserDao.class
 step\learning\java231web\ioc\IocServletsModule.class
 step\learning\java231web\servlets\GsonServlet.class
+step\learning\java231web\models\UserSignupFormModel.class
 step\learning\java231web\services\db\MySqlDbService.class
 step\learning\java231web\servlets\DbServlet.class
 step\learning\java231web\services\db\IDbService.class
