@@ -12,9 +12,13 @@ public class UserSignupFormModel {
     private static final Pattern NAME_PATTERN = Pattern.compile(
             "^[A-Za-zА-Яа-яІіЇїЄєҐґ'\\-\\s]{2,50}$"
     );
+    private static final Pattern LOGIN_PATTERN = Pattern.compile(
+            "^[A-Za-z0-9_.-]{3,30}$"
+    );
 
     private String name;
     private String email;
+    private String login;
     private String password;
     private String repeatPassword;
     private boolean agree;
@@ -27,9 +31,24 @@ public class UserSignupFormModel {
         this.email = email;
     }
 
+    public UserSignupFormModel(String name, String email, String login) {
+        this.name = name;
+        this.email = email;
+        this.login = login;
+    }
+
     public UserSignupFormModel(String name, String email, String password, String repeatPassword, boolean agree) {
         this.name = name;
         this.email = email;
+        this.password = password;
+        this.repeatPassword = repeatPassword;
+        this.agree = agree;
+    }
+
+    public UserSignupFormModel(String name, String email, String login, String password, String repeatPassword, boolean agree) {
+        this.name = name;
+        this.email = email;
+        this.login = login;
         this.password = password;
         this.repeatPassword = repeatPassword;
         this.agree = agree;
@@ -50,6 +69,15 @@ public class UserSignupFormModel {
 
     public UserSignupFormModel setEmail(String email) {
         this.email = email;
+        return this;
+    }
+
+    public String getLogin() {
+        return login;
+    }
+
+    public UserSignupFormModel setLogin(String login) {
+        this.login = login;
         return this;
     }
 
@@ -95,6 +123,14 @@ public class UserSignupFormModel {
             errors.put("email", "Email не може бути порожнім");
         } else if (!EMAIL_PATTERN.matcher(email.trim()).matches()) {
             errors.put("email", "Некоректний формат email");
+        }
+
+        if (login != null && !login.trim().isEmpty()) {
+            if (login.trim().length() < 3) {
+                errors.put("login", "Логін повинен містити щонайменше 3 символи");
+            } else if (!LOGIN_PATTERN.matcher(login.trim()).matches()) {
+                errors.put("login", "Логін містить неприпустимі символи");
+            }
         }
 
         if (password != null) {

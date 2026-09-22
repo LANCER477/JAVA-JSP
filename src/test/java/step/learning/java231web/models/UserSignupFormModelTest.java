@@ -2,7 +2,13 @@ package step.learning.java231web.models;
 
 import org.junit.jupiter.api.Test;
 import step.learning.java231web.dao.UserDao;
+import step.learning.java231web.services.db.IDbService;
 
+import java.lang.reflect.Proxy;
+import java.sql.Connection;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.sql.SQLException;
 import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -14,6 +20,7 @@ public class UserSignupFormModelTest {
         UserSignupFormModel model = new UserSignupFormModel(
                 "Иван Иванов",
                 "ivan.ivanov@example.com",
+                "ivan_231",
                 "Password123",
                 "Password123",
                 true
@@ -76,6 +83,44 @@ public class UserSignupFormModelTest {
     }
 
     @Test
+    public void testValidLoginFormatPasses() {
+        UserSignupFormModel model = new UserSignupFormModel(
+                "Олександр",
+                "oleksandr@example.com",
+                "admin_231"
+        );
+
+        assertTrue(model.isValid());
+        assertNull(model.getValidationErrors().get("login"));
+    }
+
+    @Test
+    public void testShortLoginFormatFails() {
+        UserSignupFormModel model = new UserSignupFormModel(
+                "Олександр",
+                "oleksandr@example.com",
+                "ab"
+        );
+
+        assertFalse(model.isValid());
+        assertTrue(model.getValidationErrors().containsKey("login"));
+        assertThrows(IllegalArgumentException.class, model::validate);
+    }
+
+    @Test
+    public void testInvalidCharactersInLoginFails() {
+        UserSignupFormModel model = new UserSignupFormModel(
+                "Олександр",
+                "oleksandr@example.com",
+                "user 123!"
+        );
+
+        assertFalse(model.isValid());
+        assertTrue(model.getValidationErrors().containsKey("login"));
+        assertThrows(IllegalArgumentException.class, model::validate);
+    }
+
+    @Test
     public void testPasswordMismatchFails() {
         UserSignupFormModel model = new UserSignupFormModel(
                 "Олександр",
@@ -113,5 +158,93 @@ public class UserSignupFormModelTest {
 
         UserSignupFormModel invalidModel = new UserSignupFormModel("", "invalid-email");
         assertThrows(IllegalArgumentException.class, () -> userDao.signupUser(invalidModel));
+    }
+
+    @Test
+    public void testLoginUniquenessValidationInUserDao() throws SQLException {
+        IDbService mockDbService = createMockDbService("admin");
+        UserDao userDao = new UserDao(mockDbService);
+
+        assertFalse(userDao.isLoginAvailable("admin"), "Existing login 'admin' should not be available");
+        assertTrue(userDao.isLoginAvailable("new_user_231"), "New login should be available");
+
+        UserSignupFormModel duplicateModel = new UserSignupFormModel(
+                "Тестовий Користувач",
+                "test@example.com",
+                "admin"
+        );
+
+        IllegalArgumentException ex = assertThrows(
+                IllegalArgumentException.class,
+                () -> userDao.signupUser(duplicateModel)
+        );
+        assertTrue(ex.getMessage().contains("вже зайнятий"));
+
+        UserSignupFormModel availableModel = new UserSignupFormModel(
+                "Тестовий Користувач",
+                "unique@example.com",
+                "new_user_231"
+        );
+
+        assertDoesNotThrow(() -> userDao.signupUser(availableModel));
+    }
+
+    private IDbService createMockDbService(final String takenLogin) {
+        return () -> (Connection) Proxy.newProxyInstance(
+                Connection.class.getClassLoader(),
+                new Class<?>[]{Connection.class},
+                (proxy, method, args) -> {
+                    if ("prepareStatement".equals(method.getName())) {
+                        final String[] boundParams = new String[2];
+                        return Proxy.newProxyInstance(
+                                PreparedStatement.class.getClassLoader(),
+                                new Class<?>[]{PreparedStatement.class},
+                                (pStmt, stmtMethod, stmtArgs) -> {
+                                    if ("setString".equals(stmtMethod.getName())) {
+                                        int idx = (Integer) stmtArgs[0];
+                                        if (idx <= 2) {
+                                            boundParams[idx - 1] = (String) stmtArgs[1];
+                                        }
+                                        return null;
+                                    }
+                                    if ("executeQuery".equals(stmtMethod.getName())) {
+                                        boolean isTaken = takenLogin != null && (
+                                                takenLogin.equalsIgnoreCase(boundParams[0]) ||
+                                                takenLogin.equalsIgnoreCase(boundParams[1])
+                                        );
+                                        final int count = isTaken ? 1 : 0;
+                                        return Proxy.newProxyInstance(
+                                            ResultSet.class.getClassLoader(),
+                                            new Class<?>[]{ResultSet.class},
+                                            (rs, rsMethod, rsArgs) -> {
+                                                if ("next".equals(rsMethod.getName())) {
+                                                    return true;
+                                                }
+                                                if ("getInt".equals(rsMethod.getName())) {
+                                                    return count;
+                                                }
+                                                if ("close".equals(rsMethod.getName())) {
+                                                    return null;
+                                                }
+                                                return null;
+                                            }
+                                        );
+                                    }
+                                    if ("executeUpdate".equals(stmtMethod.getName())) {
+                                        return 1;
+                                    }
+                                    if ("close".equals(stmtMethod.getName())) {
+                                        return null;
+                                    }
+                                    return null;
+                                }
+                        );
+                    }
+                    if ("close".equals(method.getName())) {
+                        return null;
+                    }
+                    return null;
+                }
+        );
     }
 }

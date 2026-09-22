@@ -2,7 +2,9 @@ package step.learning.java231web.dao;
 
 import com.google.inject.Inject;
 import com.google.inject.Singleton;
+import java.sql.Connection;
 import java.sql.PreparedStatement;
+import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.UUID;
@@ -31,11 +33,49 @@ public class UserDao {
         String sql = "CREATE TABLE IF NOT EXISTS user ("
                 + "id CHAR(36) PRIMARY KEY, "
                 + "name VARCHAR(128) NOT NULL, "
-                + "email VARCHAR(128) NOT NULL"
+                + "email VARCHAR(128) NOT NULL, "
+                + "login VARCHAR(64) NULL, "
+                + "created_at DATETIME DEFAULT CURRENT_TIMESTAMP, "
+                + "deleted_at DATETIME NULL"
                 + ")";
         try (Statement statement = dbService.getConnection().createStatement()) {
             statement.executeUpdate(sql);
         }
+    }
+
+    public boolean isLoginAvailable(String login) throws SQLException {
+        if (login == null || login.trim().isEmpty()) {
+            return false;
+        }
+        String trimmed = login.trim();
+        String sql = "SELECT COUNT(*) FROM user WHERE (email = ? OR name = ?) AND (deleted_at IS NULL)";
+        try (PreparedStatement prep = dbService.getConnection().prepareStatement(sql)) {
+            prep.setString(1, trimmed);
+            prep.setString(2, trimmed);
+            try (ResultSet rs = prep.executeQuery()) {
+                if (rs.next()) {
+                    return rs.getInt(1) == 0;
+                }
+            }
+        }
+        return false;
+    }
+
+    public boolean isEmailAvailable(String email) throws SQLException {
+        if (email == null || email.trim().isEmpty()) {
+            return false;
+        }
+        String trimmed = email.trim();
+        String sql = "SELECT COUNT(*) FROM user WHERE email = ? AND (deleted_at IS NULL)";
+        try (PreparedStatement prep = dbService.getConnection().prepareStatement(sql)) {
+            prep.setString(1, trimmed);
+            try (ResultSet rs = prep.executeQuery()) {
+                if (rs.next()) {
+                    return rs.getInt(1) == 0;
+                }
+            }
+        }
+        return false;
     }
 
     public void signupUser(UserSignupFormModel formModel) throws SQLException {
@@ -43,6 +83,18 @@ public class UserDao {
             throw new IllegalArgumentException("Model cannot be null");
         }
         formModel.validate();
+
+        String checkLogin = formModel.getLogin() != null && !formModel.getLogin().trim().isEmpty()
+                ? formModel.getLogin().trim()
+                : formModel.getName().trim();
+
+        if (!isLoginAvailable(checkLogin)) {
+            throw new IllegalArgumentException("Логін '" + checkLogin + "' вже зайнятий");
+        }
+
+        if (!isEmailAvailable(formModel.getEmail())) {
+            throw new IllegalArgumentException("Email '" + formModel.getEmail() + "' вже зайнятий");
+        }
 
         String sql = "INSERT INTO user(id, name, email) VALUES (?, ?, ?)";
         String userId = UUID.randomUUID().toString();
