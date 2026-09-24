@@ -8,6 +8,10 @@ C:\Users\maksi\Downloads\java231web-master\src\main\java\step\learning\java231we
 C:\Users\maksi\Downloads\java231web-master\src\main\java\step\learning\java231web\JakartaRestConfiguration.java
 C:\Users\maksi\Downloads\java231web-master\src\main\java\step\learning\java231web\models\UserSignupFormModel.java
 C:\Users\maksi\Downloads\java231web-master\src\main\java\step\learning\java231web\resources\JakartaEE11Resource.java
+C:\Users\maksi\Downloads\java231web-master\src\main\java\step\learning\java231web\rest\RestMeta.java
+C:\Users\maksi\Downloads\java231web-master\src\main\java\step\learning\java231web\rest\RestPagination.java
+C:\Users\maksi\Downloads\java231web-master\src\main\java\step\learning\java231web\rest\RestResponse.java
+C:\Users\maksi\Downloads\java231web-master\src\main\java\step\learning\java231web\rest\RestStatus.java
 C:\Users\maksi\Downloads\java231web-master\src\main\java\step\learning\java231web\services\db\IDbService.java
 C:\Users\maksi\Downloads\java231web-master\src\main\java\step\learning\java231web\services\db\MySqlDbService.java
 C:\Users\maksi\Downloads\java231web-master\src\main\java\step\learning\java231web\services\hash\IHashService.java

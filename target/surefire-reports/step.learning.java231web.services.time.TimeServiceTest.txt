@@ -1,4 +1,4 @@
 -------------------------------------------------------------------------------
 Test set: step.learning.java231web.services.time.TimeServiceTest
 -------------------------------------------------------------------------------
-Tests run: 5, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.168 s -- in step.learning.java231web.services.time.TimeServiceTest
+Tests run: 5, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.154 s -- in step.learning.java231web.services.time.TimeServiceTest

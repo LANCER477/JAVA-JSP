@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<testsuite xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="https://maven.apache.org/surefire/maven-surefire-plugin/xsd/surefire-test-report.xsd" version="3.0.2" name="step.learning.java231web.models.UserSignupFormModelTest" time="0.115" tests="13" errors="0" skipped="0" failures="0">
+<testsuite xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="https://maven.apache.org/surefire/maven-surefire-plugin/xsd/surefire-test-report.xsd" version="3.0.2" name="step.learning.java231web.rest.RestStatusTest" time="0.008" tests="6" errors="0" skipped="0" failures="0">
   <properties>
     <property name="java.specification.version" value="26"/>
     <property name="sun.cpu.isalist" value="amd64"/>
@@ -59,17 +59,10 @@
     <property name="sun.io.unicode.encoding" value="UnicodeLittle"/>
     <property name="java.class.version" value="70.0"/>
   </properties>
-  <testcase name="testNullEmailFails" classname="step.learning.java231web.models.UserSignupFormModelTest" time="0.018"/>
-  <testcase name="testShortLoginFormatFails" classname="step.learning.java231web.models.UserSignupFormModelTest" time="0.001"/>
-  <testcase name="testPasswordMismatchFails" classname="step.learning.java231web.models.UserSignupFormModelTest" time="0.001"/>
-  <testcase name="testLoginUniquenessValidationInUserDao" classname="step.learning.java231web.models.UserSignupFormModelTest" time="0.06"/>
-  <testcase name="testInvalidCharactersInLoginFails" classname="step.learning.java231web.models.UserSignupFormModelTest" time="0.001"/>
-  <testcase name="testUserDaoRejectsNullAndInvalidModelBeforeDatabaseCall" classname="step.learning.java231web.models.UserSignupFormModelTest" time="0.001"/>
-  <testcase name="testEmptyAndBlankNameFails" classname="step.learning.java231web.models.UserSignupFormModelTest" time="0.0"/>
-  <testcase name="testShortPasswordFails" classname="step.learning.java231web.models.UserSignupFormModelTest" time="0.001"/>
-  <testcase name="testValidLoginFormatPasses" classname="step.learning.java231web.models.UserSignupFormModelTest" time="0.001"/>
-  <testcase name="testInvalidEmailFormatFails" classname="step.learning.java231web.models.UserSignupFormModelTest" time="0.001"/>
-  <testcase name="testShortNameFails" classname="step.learning.java231web.models.UserSignupFormModelTest" time="0.002"/>
-  <testcase name="testValidModelPassesValidation" classname="step.learning.java231web.models.UserSignupFormModelTest" time="0.001"/>
-  <testcase name="testNullNameThrowsException" classname="step.learning.java231web.models.UserSignupFormModelTest" time="0.001"/>
+  <testcase name="testStandardServerErrorStatuses" classname="step.learning.java231web.rest.RestStatusTest" time="0.001"/>
+  <testcase name="testCustomStatusCreationAndChaining" classname="step.learning.java231web.rest.RestStatusTest" time="0.002"/>
+  <testcase name="testProposedNonStandardStatusesForHomework" classname="step.learning.java231web.rest.RestStatusTest" time="0.0"/>
+  <testcase name="testStandardClientErrorStatuses" classname="step.learning.java231web.rest.RestStatusTest" time="0.0"/>
+  <testcase name="testStandardSuccessStatuses" classname="step.learning.java231web.rest.RestStatusTest" time="0.0"/>
+  <testcase name="testNonStandardStatusesFromLecture" classname="step.learning.java231web.rest.RestStatusTest" time="0.0"/>
 </testsuite>
