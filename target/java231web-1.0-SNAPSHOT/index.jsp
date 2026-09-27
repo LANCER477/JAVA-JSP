@@ -29,6 +29,7 @@
                 <a href="<%= contextPath %>/about">About</a>
                 <a href="<%= contextPath %>/gson">Gson API</a>
                 <a href="<%= contextPath %>/db">DB</a>
+                <a href="<%= contextPath %>/back">Back API</a>
             </nav>
         </header>
         <main>
