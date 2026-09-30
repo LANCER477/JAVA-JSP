@@ -70,45 +70,73 @@ public class UserServlet extends HttpServlet {
 
     @Override
     protected void doGet(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
+        authenticate(req, resp);
+    }
+
+    public void authenticate(HttpServletRequest req, HttpServletResponse resp) throws IOException {
         resp.setContentType("application/json; charset=UTF-8");
 
         String authHeader = req.getHeader("Authorization");
-        if (authHeader != null && authHeader.startsWith("Basic ")) {
-            String base64Credentials = authHeader.substring("Basic ".length()).trim();
-            byte[] credDecoded = Base64.getDecoder().decode(base64Credentials);
-            String credentials = new String(credDecoded, StandardCharsets.UTF_8);
-            String[] values = credentials.split(":", 2);
-
-            if (values.length == 2) {
-                String login = values[0];
-                String password = values[1];
-
-                Map<String, Object> payload = new LinkedHashMap<>();
-                payload.put("sub", login);
-                payload.put("name", login);
-                payload.put("email", login.contains("@") ? login : login + "@example.com");
-                payload.put("dob", "2026-01-01");
-                payload.put("ava", "/img/user.jpg");
-
-                String headerJson = "{\"alg\":\"none\",\"typ\":\"JWT\"}";
-                String payloadJson = gson.toJson(payload);
-
-                String token = Base64.getUrlEncoder().withoutPadding().encodeToString(headerJson.getBytes(StandardCharsets.UTF_8))
-                        + "."
-                        + Base64.getUrlEncoder().withoutPadding().encodeToString(payloadJson.getBytes(StandardCharsets.UTF_8))
-                        + ".signature";
-
-                Map<String, Object> authData = new LinkedHashMap<>();
-                authData.put("token", token);
-                authData.put("user", payload);
-
-                resp.setStatus(HttpServletResponse.SC_OK);
-                resp.getWriter().print(gson.toJson(new RestResponse(RestStatus.Ok, token)));
-                return;
-            }
+        if (authHeader == null || authHeader.trim().isEmpty()) {
+            sendRest(resp, HttpServletResponse.SC_UNAUTHORIZED, RestStatus.HeaderRequired, "Missing 'Authorization' header");
+            return;
         }
 
-        resp.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
-        resp.getWriter().print(gson.toJson(new RestResponse(RestStatus.Unauthorized, "Credentials required")));
+        if (!authHeader.startsWith("Basic ")) {
+            sendRest(resp, HttpServletResponse.SC_UNAUTHORIZED, RestStatus.HeaderMalformed, "Authorization scheme must be 'Basic'");
+            return;
+        }
+
+        String base64Credentials = authHeader.substring("Basic ".length()).trim();
+        byte[] credDecoded;
+        try {
+            credDecoded = Base64.getDecoder().decode(base64Credentials);
+        } catch (IllegalArgumentException ex) {
+            sendRest(resp, HttpServletResponse.SC_BAD_REQUEST, RestStatus.HeaderMalformed, "Invalid Base64 encoding in 'Authorization' header");
+            return;
+        }
+
+        String credentials = new String(credDecoded, StandardCharsets.UTF_8);
+        String[] values = credentials.split(":", 2);
+
+        if (values.length != 2) {
+            sendRest(resp, HttpServletResponse.SC_BAD_REQUEST, RestStatus.HeaderMalformed, "Credentials must be in format 'login:password'");
+            return;
+        }
+
+        String login = values[0].trim();
+        String password = values[1];
+
+        if (login.isEmpty() || password.isEmpty()) {
+            sendRest(resp, HttpServletResponse.SC_UNAUTHORIZED, RestStatus.Unauthorized, "Login and password must not be empty");
+            return;
+        }
+
+        Map<String, Object> payload = new LinkedHashMap<>();
+        payload.put("sub", login);
+        payload.put("name", login);
+        payload.put("email", login.contains("@") ? login : login + "@example.com");
+        payload.put("dob", "2026-01-01");
+        payload.put("ava", "/img/user.jpg");
+
+        String headerJson = "{\"alg\":\"none\",\"typ\":\"JWT\"}";
+        String payloadJson = gson.toJson(payload);
+
+        String token = Base64.getUrlEncoder().withoutPadding().encodeToString(headerJson.getBytes(StandardCharsets.UTF_8))
+                + "."
+                + Base64.getUrlEncoder().withoutPadding().encodeToString(payloadJson.getBytes(StandardCharsets.UTF_8))
+                + ".signature";
+
+        sendRest(resp, HttpServletResponse.SC_OK, RestStatus.Ok, token);
+    }
+
+    private void sendRest(HttpServletResponse resp, int httpStatusCode, RestStatus status, Object data) throws IOException {
+        resp.setStatus(httpStatusCode);
+        RestResponse restResponse = new RestResponse(status, data);
+        if (restResponse.getMeta() != null) {
+            restResponse.getMeta().setService("UserServlet::authenticate");
+        }
+        resp.getWriter().print(gson.toJson(restResponse));
     }
 }
+
