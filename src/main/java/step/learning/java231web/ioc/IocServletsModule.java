@@ -25,6 +25,7 @@ public class IocServletsModule extends ServletModule {
         serve("/gson" ).with( GsonServlet.class  );
         serve("/db"   ).with( DbServlet.class    );
         serve("/back" ).with( BackServlet.class  );
+        serve("/admin", "/admin/*").with( AdminServlet.class );
         serve("/user", "/user/*", "/User/*").with( UserServlet.class );
     }
 

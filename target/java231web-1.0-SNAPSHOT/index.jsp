@@ -3,10 +3,10 @@
 <%
     String viewName = (String) request.getAttribute("servlet");
     if(viewName == null) {
-        viewName = "home.jsp";
+        viewName = "/home.jsp";
     }
     else {
-        viewName = viewName.toLowerCase() + ".jsp";
+        viewName = "/" + viewName.toLowerCase() + ".jsp";
     }
     Charset charset = (Charset) request.getAttribute("charset");
     String charsetName = charset == null ? "undefined" : charset.name();
@@ -30,6 +30,7 @@
                 <a href="<%= contextPath %>/gson">Gson API</a>
                 <a href="<%= contextPath %>/db">DB</a>
                 <a href="<%= contextPath %>/back">Back API</a>
+                <a href="<%= contextPath %>/admin/">Admin</a>
             </nav>
         </header>
         <main>

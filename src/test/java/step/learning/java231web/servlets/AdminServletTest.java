@@ -1,0 +1,139 @@
+package step.learning.java231web.servlets;
+
+import jakarta.servlet.RequestDispatcher;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+
+import java.lang.reflect.Proxy;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
+import static org.junit.jupiter.api.Assertions.*;
+
+public class AdminServletTest {
+
+    private AdminServlet adminServlet;
+
+    @BeforeEach
+    public void setUp() {
+        adminServlet = new AdminServlet();
+    }
+
+    @Test
+    public void testAdminHomeRouteDefault() throws Exception {
+        TestContext ctx = new TestContext();
+        HttpServletRequest request = createMockRequest(null, ctx);
+        HttpServletResponse response = createMockResponse(ctx);
+
+        adminServlet.doGet(request, response);
+
+        assertEquals("Admin", ctx.attributes.get("servlet"));
+        assertEquals("home", ctx.attributes.get("adminPage"));
+        assertEquals("/admin_home.jsp", ctx.attributes.get("adminView"));
+        assertEquals(200, ctx.status);
+        assertEquals("/index.jsp", ctx.forwardedUrl);
+    }
+
+    @Test
+    public void testAdminProductRoute() throws Exception {
+        TestContext ctx = new TestContext();
+        HttpServletRequest request = createMockRequest("/product", ctx);
+        HttpServletResponse response = createMockResponse(ctx);
+
+        adminServlet.doGet(request, response);
+
+        assertEquals("product", ctx.attributes.get("adminPage"));
+        assertEquals("/admin_product.jsp", ctx.attributes.get("adminView"));
+        assertNotNull(ctx.attributes.get("sections"));
+        @SuppressWarnings("unchecked")
+        List<String> sections = (List<String>) ctx.attributes.get("sections");
+        assertTrue(sections.contains("Garminfull"));
+        assertEquals(200, ctx.status);
+    }
+
+    @Test
+    public void testAdminSectionRoute() throws Exception {
+        TestContext ctx = new TestContext();
+        HttpServletRequest request = createMockRequest("/section", ctx);
+        HttpServletResponse response = createMockResponse(ctx);
+
+        adminServlet.doGet(request, response);
+
+        assertEquals("section", ctx.attributes.get("adminPage"));
+        assertEquals("/admin_section.jsp", ctx.attributes.get("adminView"));
+        assertEquals(200, ctx.status);
+    }
+
+    @Test
+    public void testAdminInternalRouteNotFoundReturns404() throws Exception {
+        TestContext ctx = new TestContext();
+        HttpServletRequest request = createMockRequest("/unknown-subpage", ctx);
+        HttpServletResponse response = createMockResponse(ctx);
+
+        adminServlet.doGet(request, response);
+
+        assertEquals(404, ctx.status, "Internal route not found must return HTTP 404");
+        assertEquals("404", ctx.attributes.get("adminPage"));
+        assertEquals("/admin_404.jsp", ctx.attributes.get("adminView"));
+        assertEquals("/unknown-subpage", ctx.attributes.get("invalidRoute"));
+        assertEquals("/index.jsp", ctx.forwardedUrl);
+    }
+
+    private static class TestContext {
+        int status = 200;
+        Map<String, Object> attributes = new HashMap<>();
+        String forwardedUrl;
+    }
+
+    private HttpServletRequest createMockRequest(String pathInfo, TestContext ctx) {
+        RequestDispatcher dispatcher = (RequestDispatcher) Proxy.newProxyInstance(
+                RequestDispatcher.class.getClassLoader(),
+                new Class<?>[]{RequestDispatcher.class},
+                (proxy, method, args) -> {
+                    if ("forward".equals(method.getName())) {
+                        return null;
+                    }
+                    return null;
+                }
+        );
+
+        return (HttpServletRequest) Proxy.newProxyInstance(
+                HttpServletRequest.class.getClassLoader(),
+                new Class<?>[]{HttpServletRequest.class},
+                (proxy, method, args) -> {
+                    if ("getPathInfo".equals(method.getName())) {
+                        return pathInfo;
+                    }
+                    if ("setAttribute".equals(method.getName())) {
+                        ctx.attributes.put((String) args[0], args[1]);
+                        return null;
+                    }
+                    if ("getAttribute".equals(method.getName())) {
+                        return ctx.attributes.get((String) args[0]);
+                    }
+                    if ("getRequestDispatcher".equals(method.getName())) {
+                        ctx.forwardedUrl = (String) args[0];
+                        return dispatcher;
+                    }
+                    return null;
+                }
+        );
+    }
+
+    private HttpServletResponse createMockResponse(TestContext ctx) {
+        return (HttpServletResponse) Proxy.newProxyInstance(
+                HttpServletResponse.class.getClassLoader(),
+                new Class<?>[]{HttpServletResponse.class},
+                (proxy, method, args) -> {
+                    if ("setStatus".equals(method.getName())) {
+                        ctx.status = (Integer) args[0];
+                        return null;
+                    }
+                    return null;
+                }
+        );
+    }
+}

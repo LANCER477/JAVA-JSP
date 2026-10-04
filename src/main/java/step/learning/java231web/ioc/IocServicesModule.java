@@ -28,6 +28,12 @@ public class IocServicesModule extends AbstractModule {
 
         bind( IDbService.class )
                 .to( MySqlDbService.class );
+
+        bind( step.learning.java231web.services.form.IFormParseService.class )
+                .to( step.learning.java231web.services.form.MixedFormParseService.class );
+
+        bind( step.learning.java231web.services.storage.IStorageService.class )
+                .to( step.learning.java231web.services.storage.DiskStorageService.class );
     }
     
 }
