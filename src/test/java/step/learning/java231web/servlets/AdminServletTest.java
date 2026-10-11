@@ -82,6 +82,46 @@ public class AdminServletTest {
         assertEquals("/index.jsp", ctx.forwardedUrl);
     }
 
+    @Test
+    public void testAdminProductDoPostValidationErrors() throws Exception {
+        Map<String, String> invalidFields = new HashMap<>();
+        invalidFields.put("product-title", "A"); // too short
+        invalidFields.put("product-price", "-5"); // negative price
+        invalidFields.put("product-slug", "invalid slug with spaces");
+
+        step.learning.java231web.services.form.FormParseResult formResult = new step.learning.java231web.services.form.FormParseResult() {
+            @Override
+            public Map<String, String> getFields() {
+                return invalidFields;
+            }
+
+            @Override
+            public Map<String, org.apache.commons.fileupload2.core.FileItem> getFiles() {
+                return java.util.Collections.emptyMap();
+            }
+        };
+
+        step.learning.java231web.services.form.IFormParseService mockFormService = req -> formResult;
+
+        AdminServlet servletWithMock = new AdminServlet(null, mockFormService, null);
+
+        TestContext ctx = new TestContext();
+        HttpServletRequest request = createMockRequest("/product", ctx);
+        HttpServletResponse response = createMockResponse(ctx);
+
+        servletWithMock.doPost(request, response);
+
+        assertNotNull(ctx.attributes.get("validationErrors"));
+        @SuppressWarnings("unchecked")
+        Map<String, String> errors = (Map<String, String>) ctx.attributes.get("validationErrors");
+        assertTrue(errors.containsKey("product-title"));
+        assertTrue(errors.containsKey("product-price"));
+        assertTrue(errors.containsKey("product-slug"));
+        assertTrue(errors.containsKey("product-image"));
+        assertNotNull(ctx.attributes.get("formError"));
+        assertEquals("product", ctx.attributes.get("adminPage"));
+    }
+
     private static class TestContext {
         int status = 200;
         Map<String, Object> attributes = new HashMap<>();

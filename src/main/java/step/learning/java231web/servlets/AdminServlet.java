@@ -21,6 +21,7 @@ import step.learning.java231web.services.db.IDbService;
 import step.learning.java231web.services.form.FormParseResult;
 import step.learning.java231web.services.form.IFormParseService;
 import step.learning.java231web.services.storage.IStorageService;
+import step.learning.java231web.models.ProductFormModel;
 import org.apache.commons.fileupload2.core.FileItem;
 
 /**
@@ -59,16 +60,25 @@ public class AdminServlet extends HttpServlet {
                     Map<String, String> fields = form.getFields();
                     Map<String, FileItem> files = form.getFiles();
 
-                    FileItem image = files.get("product-image");
-                    String savedFileName = null;
-                    if (image != null && storageService != null) {
-                        savedFileName = storageService.save(image);
-                    }
+                    ProductFormModel model = ProductFormModel.fromFormParseResult(form);
+                    Map<String, String> validationErrors = model.getValidationErrors();
 
-                    req.setAttribute("formMessage", "Дані товару успішно передано та розпарсено! "
-                            + (image != null ? "Файл: " + image.getName() + " (" + image.getSize() + " байт)" : ""));
-                    req.setAttribute("formFields", fields);
-                    req.setAttribute("savedFileName", savedFileName);
+                    if (!validationErrors.isEmpty()) {
+                        req.setAttribute("validationErrors", validationErrors);
+                        req.setAttribute("formFields", fields);
+                        req.setAttribute("formError", "Виявлено помилки валідації! Будь ласка, виправте виділені поля форми.");
+                    } else {
+                        FileItem image = model.getImageItem();
+                        String savedFileName = null;
+                        if (image != null && storageService != null) {
+                            savedFileName = storageService.save(image);
+                        }
+
+                        req.setAttribute("formMessage", "Дані товару успішно передано, провалідовано та збережено! "
+                                + (image != null ? "Файл: " + image.getName() + " (" + image.getSize() + " байт)" : ""));
+                        req.setAttribute("formFields", fields);
+                        req.setAttribute("savedFileName", savedFileName);
+                    }
                 } catch (Exception ex) {
                     req.setAttribute("formError", ex.getMessage());
                 }

@@ -3,6 +3,7 @@ step\learning\java231web\ioc\IocServletsModule.class
 step\learning\java231web\servlets\GsonServlet.class
 step\learning\java231web\models\UserSignupFormModel.class
 step\learning\java231web\servlets\DbServlet.class
+step\learning\java231web\models\ProductFormModel.class
 step\learning\java231web\services\db\IDbService.class
 step\learning\java231web\servlets\AboutServlet.class
 step\learning\java231web\servlets\GsonServlet$Data.class
