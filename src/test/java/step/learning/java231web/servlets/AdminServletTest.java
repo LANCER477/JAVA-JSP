@@ -122,6 +122,47 @@ public class AdminServletTest {
         assertEquals("product", ctx.attributes.get("adminPage"));
     }
 
+    @Test
+    public void testAdminDoPostSectionValidationErrors() throws Exception {
+        Map<String, String> invalidFields = new HashMap<>();
+        invalidFields.put("section-title", "");
+        invalidFields.put("section-description", "short");
+        invalidFields.put("section-slug", "INVALID_SLUG!");
+        invalidFields.put("section-order", "-1");
+
+        step.learning.java231web.services.form.FormParseResult formResult = new step.learning.java231web.services.form.FormParseResult() {
+            @Override
+            public Map<String, String> getFields() {
+                return invalidFields;
+            }
+
+            @Override
+            public Map<String, org.apache.commons.fileupload2.core.FileItem> getFiles() {
+                return java.util.Collections.emptyMap();
+            }
+        };
+
+        step.learning.java231web.services.form.IFormParseService mockFormService = req -> formResult;
+
+        AdminServlet servletWithMock = new AdminServlet(null, mockFormService, null);
+
+        TestContext ctx = new TestContext();
+        HttpServletRequest request = createMockRequest("/section", ctx);
+        HttpServletResponse response = createMockResponse(ctx);
+
+        servletWithMock.doPost(request, response);
+
+        assertNotNull(ctx.attributes.get("validationErrors"));
+        @SuppressWarnings("unchecked")
+        Map<String, String> errors = (Map<String, String>) ctx.attributes.get("validationErrors");
+        assertTrue(errors.containsKey("section-title"));
+        assertTrue(errors.containsKey("section-slug"));
+        assertTrue(errors.containsKey("section-order"));
+        assertTrue(errors.containsKey("section-image"));
+        assertNotNull(ctx.attributes.get("formError"));
+        assertEquals("section", ctx.attributes.get("adminPage"));
+    }
+
     private static class TestContext {
         int status = 200;
         Map<String, Object> attributes = new HashMap<>();
