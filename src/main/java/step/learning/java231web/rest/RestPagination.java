@@ -32,6 +32,15 @@ public class RestPagination {
         return this;
     }
 
+    public int getPageSize() {
+        return perPage;
+    }
+
+    public RestPagination setPageSize(int pageSize) {
+        this.perPage = pageSize;
+        return this;
+    }
+
     public int getTotal() {
         return total;
     }
