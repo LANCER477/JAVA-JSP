@@ -88,4 +88,54 @@ public class ProductDao {
         }
         return list;
     }
+
+    public List<Product> getAllProducts() {
+        List<Product> list = new ArrayList<>();
+        if (dbService == null) {
+            return list;
+        }
+        String sql = "SELECT * FROM products WHERE product_delete_dt IS NULL ORDER BY product_order";
+        try (Statement stmt = dbService.getConnection().createStatement();
+             ResultSet rs = stmt.executeQuery(sql)) {
+            while (rs.next()) {
+                Product product = Product.fromResultSet(rs);
+                if (product != null) {
+                    list.add(product);
+                }
+            }
+        } catch (Exception ex) {
+            logger.log(Level.WARNING, sql, ex);
+        }
+        return list;
+    }
+
+    public Product getProductByIdOrSlug(String idOrSlug) {
+        if (dbService == null || idOrSlug == null || idOrSlug.trim().isEmpty()) {
+            return null;
+        }
+        String cleanSlug = idOrSlug.trim();
+        while (cleanSlug.startsWith("/")) {
+            cleanSlug = cleanSlug.substring(1);
+        }
+        while (cleanSlug.endsWith("/")) {
+            cleanSlug = cleanSlug.substring(0, cleanSlug.length() - 1);
+        }
+
+        String sql = "SELECT * FROM products "
+                + "WHERE (product_id = ? OR product_slug = ? OR product_slug = ?) "
+                + "AND product_delete_dt IS NULL LIMIT 1";
+        try (PreparedStatement prep = dbService.getConnection().prepareStatement(sql)) {
+            prep.setString(1, idOrSlug);
+            prep.setString(2, idOrSlug);
+            prep.setString(3, cleanSlug);
+            try (ResultSet rs = prep.executeQuery()) {
+                if (rs.next()) {
+                    return Product.fromResultSet(rs);
+                }
+            }
+        } catch (Exception ex) {
+            logger.log(Level.WARNING, "Error finding product by id or slug: " + idOrSlug, ex);
+        }
+        return null;
+    }
 }

@@ -11,11 +11,12 @@ public class Product {
     private String title;
     private String description;
     private String slug;
-    private double price;
-    private int stock;
-    private int order;
+    private transient double price;
+    private transient int stock;
+    private transient int order;
     private String imageUrl;
     private Date deletedAt;
+    private Integer orderInPrice;
 
     public Product() {
     }
@@ -34,7 +35,9 @@ public class Product {
             product.setSlug(rs.getString("product_slug"));
             product.setPrice(rs.getDouble("product_price"));
             product.setStock(rs.getInt("product_stock"));
-            product.setOrder(rs.getInt("product_order"));
+            int orderVal = rs.getInt("product_order");
+            product.setOrder(orderVal);
+            product.setOrderInPrice(orderVal);
             product.setImageUrl(rs.getString("product_image"));
             Timestamp ts = rs.getTimestamp("product_delete_dt");
             if (ts != null) {
@@ -133,6 +136,18 @@ public class Product {
 
     public Product setDeletedAt(Date deletedAt) {
         this.deletedAt = deletedAt;
+        return this;
+    }
+
+    public Integer getOrderInPrice() {
+        return orderInPrice != null ? orderInPrice : order;
+    }
+
+    public Product setOrderInPrice(Integer orderInPrice) {
+        this.orderInPrice = orderInPrice;
+        if (orderInPrice != null) {
+            this.order = orderInPrice;
+        }
         return this;
     }
 }

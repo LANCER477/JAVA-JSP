@@ -14,19 +14,23 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import org.apache.commons.fileupload2.core.FileItem;
+import step.learning.java231web.data.dao.ProductDao;
+import step.learning.java231web.data.dao.ProductSectionDao;
+import step.learning.java231web.data.dao.ProductVersionDao;
+import step.learning.java231web.data.dto.Product;
+import step.learning.java231web.data.dto.ProductSection;
+import step.learning.java231web.data.dto.ProductVersion;
+import step.learning.java231web.data.models.AdminProductViewModel;
+import step.learning.java231web.models.ProductFormModel;
+import step.learning.java231web.models.SectionFormModel;
 import step.learning.java231web.services.db.IDbService;
-
 import step.learning.java231web.services.form.FormParseResult;
 import step.learning.java231web.services.form.IFormParseService;
 import step.learning.java231web.services.storage.IStorageService;
-import step.learning.java231web.models.ProductFormModel;
-import step.learning.java231web.models.SectionFormModel;
-import step.learning.java231web.data.dao.ProductSectionDao;
-import step.learning.java231web.data.dto.ProductSection;
-import java.util.UUID;
-import org.apache.commons.fileupload2.core.FileItem;
 
 /**
  * Сервлет адміністративної сторінки з підтримкою внутрішніх маршрутів
@@ -38,61 +42,147 @@ public class AdminServlet extends HttpServlet {
     private final IFormParseService formParseService;
     private final IStorageService storageService;
     private final ProductSectionDao productSectionDao;
+    private final ProductDao productDao;
+    private final ProductVersionDao productVersionDao;
     private final Logger logger = Logger.getLogger(AdminServlet.class.getName());
 
     @Inject
-    public AdminServlet(IDbService dbService, IFormParseService formParseService, IStorageService storageService, ProductSectionDao productSectionDao) {
+    public AdminServlet(IDbService dbService, IFormParseService formParseService, IStorageService storageService,
+                        ProductSectionDao productSectionDao, ProductDao productDao, ProductVersionDao productVersionDao) {
         this.dbService = dbService;
         this.formParseService = formParseService;
         this.storageService = storageService;
         this.productSectionDao = productSectionDao;
+        this.productDao = productDao;
+        this.productVersionDao = productVersionDao;
+    }
+
+    public AdminServlet(IDbService dbService, IFormParseService formParseService, IStorageService storageService, ProductSectionDao productSectionDao) {
+        this(dbService, formParseService, storageService, productSectionDao, null, null);
     }
 
     public AdminServlet(IDbService dbService, IFormParseService formParseService, IStorageService storageService) {
-        this(dbService, formParseService, storageService, null);
+        this(dbService, formParseService, storageService, null, null, null);
     }
 
     public AdminServlet(IDbService dbService) {
-        this(dbService, null, null, null);
+        this(dbService, null, null, null, null, null);
     }
 
     public AdminServlet() {
-        this(null, null, null, null);
+        this(null, null, null, null, null, null);
     }
 
     @Override
     protected void doPost(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
         String pathInfo = req.getPathInfo();
-        if (pathInfo != null && (pathInfo.equalsIgnoreCase("/product") || pathInfo.equalsIgnoreCase("/product/"))) {
+        if (pathInfo != null && (pathInfo.equalsIgnoreCase("/product") || pathInfo.equalsIgnoreCase("/product/")
+                || pathInfo.equalsIgnoreCase("/product-version") || pathInfo.equalsIgnoreCase("/product-version/"))) {
+            AdminProductViewModel viewModel = new AdminProductViewModel();
+            if (productSectionDao != null) {
+                viewModel.setProductSections(productSectionDao.getAllSections());
+            }
+            if (productDao != null) {
+                viewModel.setProducts(productDao.getAllProducts());
+            }
+
             if (formParseService != null) {
                 try {
                     FormParseResult form = formParseService.parse(req);
                     Map<String, String> fields = form.getFields();
                     Map<String, FileItem> files = form.getFiles();
 
-                    ProductFormModel model = ProductFormModel.fromFormParseResult(form);
-                    Map<String, String> validationErrors = model.getValidationErrors();
+                    boolean isVersion = pathInfo.toLowerCase().contains("version")
+                            || fields.containsKey("product-id");
 
-                    if (!validationErrors.isEmpty()) {
-                        req.setAttribute("validationErrors", validationErrors);
-                        req.setAttribute("formFields", fields);
-                        req.setAttribute("formError", "Виявлено помилки валідації! Будь ласка, виправте виділені поля форми.");
-                    } else {
-                        FileItem image = model.getImageItem();
+                    if (isVersion) {
+                        FileItem image = files.get("product-image");
                         String savedFileName = null;
-                        if (image != null && storageService != null) {
+                        if (image != null && storageService != null && image.getSize() > 0) {
                             savedFileName = storageService.save(image);
                         }
 
-                        req.setAttribute("formMessage", "Дані товару успішно передано, провалідовано та збережено! "
-                                + (image != null ? "Файл: " + image.getName() + " (" + image.getSize() + " байт)" : ""));
-                        req.setAttribute("formFields", fields);
-                        req.setAttribute("savedFileName", savedFileName);
+                        ProductVersion version = new ProductVersion();
+                        version.setId(UUID.randomUUID().toString());
+                        version.setProductId(fields.get("product-id"));
+                        version.setTitle(fields.get("product-title"));
+                        version.setDescription(fields.get("product-description"));
+                        version.setSlug(fields.get("product-slug"));
+                        try {
+                            String priceStr = fields.get("product-price");
+                            if (priceStr != null && !priceStr.trim().isEmpty()) {
+                                version.setPrice(Double.parseDouble(priceStr.trim()));
+                            }
+                        } catch (Exception ignored) {}
+                        try {
+                            String stockStr = fields.get("product-stock");
+                            if (stockStr != null && !stockStr.trim().isEmpty()) {
+                                version.setStock(Integer.parseInt(stockStr.trim()));
+                            }
+                        } catch (Exception ignored) {}
+                        try {
+                            String orderStr = fields.get("product-order");
+                            if (orderStr != null && !orderStr.trim().isEmpty()) {
+                                version.setOrder(Integer.parseInt(orderStr.trim()));
+                            }
+                        } catch (Exception ignored) {}
+                        version.setImageUrl(savedFileName);
+
+                        if (productVersionDao != null) {
+                            productVersionDao.addProductVersion(version);
+                        }
+
+                        viewModel.setOkMessage("Версію товару успішно додано: " + (version.getTitle() != null ? version.getTitle() : ""));
+                    } else {
+                        ProductFormModel model = ProductFormModel.fromFormParseResult(form);
+                        Map<String, String> validationErrors = model.getValidationErrors();
+
+                        if (!validationErrors.isEmpty()) {
+                            req.setAttribute("validationErrors", validationErrors);
+                            req.setAttribute("formFields", fields);
+                            req.setAttribute("formError", "Виявлено помилки валідації! Будь ласка, виправте виділені поля форми.");
+                            viewModel.setExceptionMessage("Виявлено помилки валідації: " + String.join(", ", validationErrors.keySet()));
+                        } else {
+                            FileItem image = model.getImageItem();
+                            String savedFileName = null;
+                            if (image != null && storageService != null && image.getSize() > 0) {
+                                savedFileName = storageService.save(image);
+                            }
+
+                            if (productDao != null) {
+                                Product product = new Product();
+                                product.setId(UUID.randomUUID().toString());
+                                product.setSectionId(model.getSectionId());
+                                product.setTitle(model.getTitle());
+                                product.setDescription(model.getDescription());
+                                product.setSlug(model.getSlug());
+                                try {
+                                    product.setPrice(Double.parseDouble(model.getPrice().trim()));
+                                } catch (Exception ignored) {}
+                                try {
+                                    product.setStock(Integer.parseInt(model.getStock().trim()));
+                                } catch (Exception ignored) {}
+                                try {
+                                    product.setOrder(Integer.parseInt(model.getOrder().trim()));
+                                } catch (Exception ignored) {}
+                                product.setImageUrl(savedFileName);
+                                productDao.addProduct(product);
+                            }
+
+                            req.setAttribute("formMessage", "Дані товару успішно передано, провалідовано та збережено! "
+                                    + (image != null ? "Файл: " + image.getName() + " (" + image.getSize() + " байт)" : ""));
+                            req.setAttribute("formFields", fields);
+                            req.setAttribute("savedFileName", savedFileName);
+                            viewModel.setOkMessage("Товар успішно додано: " + model.getTitle());
+                        }
                     }
                 } catch (Exception ex) {
                     req.setAttribute("formError", ex.getMessage());
+                    viewModel.setExceptionMessage(ex.getMessage());
                 }
             }
+
+            req.setAttribute("viewModel", viewModel);
             doGet(req, resp);
             return;
         }
@@ -114,7 +204,7 @@ public class AdminServlet extends HttpServlet {
                     } else {
                         FileItem image = model.getImageItem();
                         String savedFileName = null;
-                        if (image != null && storageService != null) {
+                        if (image != null && storageService != null && image.getSize() > 0) {
                             savedFileName = storageService.save(image);
                         }
 
@@ -164,10 +254,23 @@ public class AdminServlet extends HttpServlet {
             adminPage = "home";
             adminView = "/admin_home.jsp";
         }
-        else if (pathInfo.equalsIgnoreCase("/product") || pathInfo.equalsIgnoreCase("/product/")) {
+        else if (pathInfo.equalsIgnoreCase("/product") || pathInfo.equalsIgnoreCase("/product/")
+                || pathInfo.equalsIgnoreCase("/product-version") || pathInfo.equalsIgnoreCase("/product-version/")) {
             adminPage = "product";
             adminView = "/admin_product.jsp";
             req.setAttribute("sections", getProductSections());
+
+            AdminProductViewModel viewModel = (AdminProductViewModel) req.getAttribute("viewModel");
+            if (viewModel == null) {
+                viewModel = new AdminProductViewModel();
+            }
+            if (productSectionDao != null) {
+                viewModel.setProductSections(productSectionDao.getAllSections());
+            }
+            if (productDao != null) {
+                viewModel.setProducts(productDao.getAllProducts());
+            }
+            req.setAttribute("viewModel", viewModel);
         }
         else if (pathInfo.equalsIgnoreCase("/section") || pathInfo.equalsIgnoreCase("/section/")) {
             adminPage = "section";

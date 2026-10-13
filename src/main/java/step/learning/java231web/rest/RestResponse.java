@@ -3,7 +3,6 @@ package step.learning.java231web.rest;
 public class RestResponse {
     private RestStatus status;
     private RestMeta meta;
-    private RestPagination pagination;
     private Object data;
 
     public RestResponse() {
@@ -41,11 +40,14 @@ public class RestResponse {
     }
 
     public RestPagination getPagination() {
-        return pagination;
+        return meta != null ? meta.getPagination() : null;
     }
 
     public RestResponse setPagination(RestPagination pagination) {
-        this.pagination = pagination;
+        if (this.meta == null) {
+            this.meta = new RestMeta();
+        }
+        this.meta.setPagination(pagination);
         return this;
     }
 

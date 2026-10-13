@@ -14,7 +14,9 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -81,9 +83,23 @@ public class ProductSectionDao {
                 + "product_delete_dt DATETIME NULL"
                 + ") ENGINE=InnoDB DEFAULT CHARSET=utf8mb4";
 
+        String sqlProductVersions = "CREATE TABLE IF NOT EXISTS product_versions ("
+                + "product_version_id CHAR(36) PRIMARY KEY, "
+                + "product_id CHAR(36) NOT NULL, "
+                + "product_version_title VARCHAR(256) NOT NULL, "
+                + "product_version_description TEXT NULL, "
+                + "product_version_slug VARCHAR(256) NOT NULL, "
+                + "product_version_price DECIMAL(10, 2) NOT NULL DEFAULT 0, "
+                + "product_version_stock INT NOT NULL DEFAULT 0, "
+                + "product_version_order INT NOT NULL DEFAULT 10000, "
+                + "product_version_image VARCHAR(256) NULL, "
+                + "product_version_delete_dt DATETIME NULL"
+                + ") ENGINE=InnoDB DEFAULT CHARSET=utf8mb4";
+
         try (Statement stmt = dbService.getConnection().createStatement()) {
             stmt.executeUpdate(sqlSections);
             stmt.executeUpdate(sqlProducts);
+            stmt.executeUpdate(sqlProductVersions);
         } catch (SQLException ex) {
             logger.log(Level.WARNING, "Error creating tables", ex);
             throw ex;
@@ -196,21 +212,95 @@ public class ProductSectionDao {
         }
     }
 
-    public long getSectionsCount() throws SQLException {
-        if (dbService == null) {
-            return 0;
-        }
-        String sql = "SELECT COUNT(*) FROM product_sections WHERE product_section_delete_dt IS NULL";
-        try (Statement stmt = dbService.getConnection().createStatement();
-             ResultSet rs = stmt.executeQuery(sql)) {
-            if (rs.next()) {
-                return rs.getLong(1);
+    public List<ProductSection> loadSectionsFromJson() {
+        try (InputStream in = getClass().getClassLoader().getResourceAsStream("sections.json")) {
+            if (in != null) {
+                try (BufferedReader reader = new BufferedReader(new InputStreamReader(in))) {
+                    Gson gson = new Gson();
+                    Type listType = new TypeToken<List<ProductSection>>() {}.getType();
+                    List<ProductSection> list = gson.fromJson(reader, listType);
+                    return list != null ? list : new ArrayList<>();
+                }
             }
-        } catch (SQLException ex) {
-            logger.log(Level.WARNING, sql, ex);
-            throw ex;
+        } catch (Exception ex) {
+            logger.log(Level.INFO, "Could not load sections from JSON: " + ex.getMessage());
         }
-        return 0;
+        return new ArrayList<>();
+    }
+
+    public List<ProductSection> getAllSections() {
+        List<ProductSection> list = new ArrayList<>();
+        if (dbService != null) {
+            try {
+                String sql = "SELECT * FROM product_sections "
+                        + "WHERE product_section_delete_dt IS NULL "
+                        + "ORDER BY product_section_order";
+                try (Statement stmt = dbService.getConnection().createStatement();
+                     ResultSet rs = stmt.executeQuery(sql)) {
+                    while (rs.next()) {
+                        ProductSection section = ProductSection.fromResultSet(rs, false);
+                        if (section.getImageUrl() != null) {
+                            section.setImageUrl("" + section.getImageUrl());
+                        }
+                        list.add(section);
+                    }
+                }
+                if (!list.isEmpty()) {
+                    return list;
+                }
+            } catch (Exception ex) {
+                logger.log(Level.INFO, "DB getAllSections error: " + ex.getMessage());
+            }
+        }
+        return loadSectionsFromJson();
+    }
+
+    public List<ProductSection> buildSectionTree(List<ProductSection> flatList) {
+        if (flatList == null || flatList.isEmpty()) {
+            return new ArrayList<>();
+        }
+        Map<String, ProductSection> map = new LinkedHashMap<>();
+        for (ProductSection s : flatList) {
+            if (s.getChildren() == null) {
+                s.setChildren(new ArrayList<>());
+            }
+            if (s.getProducts() == null) {
+                s.setProducts(new ArrayList<>());
+            }
+            map.put(s.getId(), s);
+        }
+
+        List<ProductSection> roots = new ArrayList<>();
+        for (ProductSection s : flatList) {
+            String parentId = s.getParentId();
+            if (parentId != null && map.containsKey(parentId) && !parentId.equals(s.getId())) {
+                ProductSection parent = map.get(parentId);
+                if (!parent.getChildren().contains(s)) {
+                    parent.getChildren().add(s);
+                }
+            } else {
+                roots.add(s);
+            }
+        }
+        return roots;
+    }
+
+    public void populateChildren(ProductSection section) {
+        if (section == null || section.getId() == null) {
+            return;
+        }
+        List<ProductSection> all = getAllSections();
+        for (ProductSection s : all) {
+            if (section.getId().equals(s.getParentId()) && !section.getChildren().contains(s)) {
+                section.getChildren().add(s);
+            }
+        }
+    }
+
+    public long getSectionsCount() throws SQLException {
+        List<ProductSection> all = getAllSections();
+        List<ProductSection> tree = buildSectionTree(all);
+        return tree.size();
     }
 
     public List<ProductSection> getSections() throws SQLException {
@@ -218,34 +308,16 @@ public class ProductSectionDao {
     }
 
     public List<ProductSection> getSections(RestPagination pagination) throws SQLException {
-        List<ProductSection> list = new ArrayList<>();
-        if (dbService == null) {
-            return list;
-        }
+        List<ProductSection> all = getAllSections();
+        List<ProductSection> tree = buildSectionTree(all);
+
         int limit = pagination != null && pagination.getPageSize() > 0 ? pagination.getPageSize() : 10;
         int page = pagination != null && pagination.getPage() > 0 ? pagination.getPage() : 1;
         int offset = limit * (page - 1);
 
-        String sql = "SELECT * FROM product_sections "
-                + "WHERE product_section_delete_dt IS NULL "
-                + "ORDER BY product_section_order LIMIT ? OFFSET ?";
-        try (PreparedStatement prep = dbService.getConnection().prepareStatement(sql)) {
-            prep.setInt(1, limit);
-            prep.setInt(2, offset);
-            try (ResultSet rs = prep.executeQuery()) {
-                while (rs.next()) {
-                    ProductSection section = ProductSection.fromResultSet(rs, false);
-                    if (section.getImageUrl() != null) {
-                        section.setImageUrl("" + section.getImageUrl());
-                    }
-                    list.add(section);
-                }
-            }
-        } catch (SQLException ex) {
-            logger.log(Level.WARNING, sql, ex);
-            throw ex;
-        }
-        return list;
+        int fromIndex = Math.min(offset, tree.size());
+        int toIndex = Math.min(offset + limit, tree.size());
+        return new ArrayList<>(tree.subList(fromIndex, toIndex));
     }
 
     public long getProductsCountBySectionSlug(String slug) throws SQLException {
@@ -291,6 +363,7 @@ public class ProductSectionDao {
                     // В АРІ /section/{slug} аналогічно до корекцій, внесених до товарів
                     ps.setImageUrl( "" + ps.getImageUrl() );
 
+                    populateChildren(ps);
                     return ps;
                 }
             }
@@ -299,6 +372,16 @@ public class ProductSectionDao {
             logger.log(Level.WARNING, sql, ex);
             throw ex;
         }
+
+        // Fallback to sections.json if not found in DB
+        List<ProductSection> jsonSections = loadSectionsFromJson();
+        for (ProductSection s : jsonSections) {
+            if (slug.equalsIgnoreCase(s.getSlug())) {
+                populateChildren(s);
+                return s;
+            }
+        }
+
         return null;
     }
 }

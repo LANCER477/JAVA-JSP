@@ -14,9 +14,10 @@ public class ProductSection {
     private String description;
     private String slug;
     private String imageUrl;
-    private int order = 10000;
+    private int orderInPrice = 10000;
     private Date deletedAt;
     private List<Product> products = new ArrayList<>();
+    private List<ProductSection> children = new ArrayList<>();
 
     public ProductSection() {
     }
@@ -105,12 +106,30 @@ public class ProductSection {
         return this;
     }
 
+    public int getOrderInPrice() {
+        return orderInPrice;
+    }
+
+    public ProductSection setOrderInPrice(int orderInPrice) {
+        this.orderInPrice = orderInPrice;
+        return this;
+    }
+
     public int getOrder() {
-        return order;
+        return orderInPrice;
     }
 
     public ProductSection setOrder(int order) {
-        this.order = order;
+        this.orderInPrice = order;
+        return this;
+    }
+
+    public List<ProductSection> getChildren() {
+        return children;
+    }
+
+    public ProductSection setChildren(List<ProductSection> children) {
+        this.children = children;
         return this;
     }
 

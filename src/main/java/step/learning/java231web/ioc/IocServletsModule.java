@@ -28,6 +28,8 @@ public class IocServletsModule extends ServletModule {
         serve("/admin", "/admin/*").with( AdminServlet.class );
         serve("/user", "/user/*", "/User/*").with( UserServlet.class );
         serve("/section", "/section/*").with( ProductSectionServlet.class );
+        serve("/product", "/product/*").with( ProductServlet.class );
+        serve("/storage", "/storage/*").with( StorageServlet.class );
     }
 
 }

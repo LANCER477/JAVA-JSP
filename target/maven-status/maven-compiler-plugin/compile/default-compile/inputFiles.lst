@@ -1,8 +1,11 @@
 C:\Users\maksi\Downloads\java231web-master\src\main\java\step\learning\java231web\dao\UserDao.java
 C:\Users\maksi\Downloads\java231web-master\src\main\java\step\learning\java231web\data\dao\ProductDao.java
 C:\Users\maksi\Downloads\java231web-master\src\main\java\step\learning\java231web\data\dao\ProductSectionDao.java
+C:\Users\maksi\Downloads\java231web-master\src\main\java\step\learning\java231web\data\dao\ProductVersionDao.java
 C:\Users\maksi\Downloads\java231web-master\src\main\java\step\learning\java231web\data\dto\Product.java
 C:\Users\maksi\Downloads\java231web-master\src\main\java\step\learning\java231web\data\dto\ProductSection.java
+C:\Users\maksi\Downloads\java231web-master\src\main\java\step\learning\java231web\data\dto\ProductVersion.java
+C:\Users\maksi\Downloads\java231web-master\src\main\java\step\learning\java231web\data\models\AdminProductViewModel.java
 C:\Users\maksi\Downloads\java231web-master\src\main\java\step\learning\java231web\filters\AuthFilter.java
 C:\Users\maksi\Downloads\java231web-master\src\main\java\step\learning\java231web\filters\CorsFilter.java
 C:\Users\maksi\Downloads\java231web-master\src\main\java\step\learning\java231web\filters\EncodingFilter.java
@@ -38,4 +41,6 @@ C:\Users\maksi\Downloads\java231web-master\src\main\java\step\learning\java231we
 C:\Users\maksi\Downloads\java231web-master\src\main\java\step\learning\java231web\servlets\GsonServlet.java
 C:\Users\maksi\Downloads\java231web-master\src\main\java\step\learning\java231web\servlets\HomeServlet.java
 C:\Users\maksi\Downloads\java231web-master\src\main\java\step\learning\java231web\servlets\ProductSectionServlet.java
+C:\Users\maksi\Downloads\java231web-master\src\main\java\step\learning\java231web\servlets\ProductServlet.java
+C:\Users\maksi\Downloads\java231web-master\src\main\java\step\learning\java231web\servlets\StorageServlet.java
 C:\Users\maksi\Downloads\java231web-master\src\main\java\step\learning\java231web\servlets\UserServlet.java

@@ -48,10 +48,52 @@ public class AdminServletTest {
         assertEquals("product", ctx.attributes.get("adminPage"));
         assertEquals("/admin_product.jsp", ctx.attributes.get("adminView"));
         assertNotNull(ctx.attributes.get("sections"));
+        assertNotNull(ctx.attributes.get("viewModel"));
+        assertTrue(ctx.attributes.get("viewModel") instanceof step.learning.java231web.data.models.AdminProductViewModel);
         @SuppressWarnings("unchecked")
         List<String> sections = (List<String>) ctx.attributes.get("sections");
         assertTrue(sections.contains("Garminfull"));
         assertEquals(200, ctx.status);
+    }
+
+    @Test
+    public void testAdminProductVersionDoPost() throws Exception {
+        Map<String, String> fields = new HashMap<>();
+        fields.put("product-id", "prod-123");
+        fields.put("product-title", "Red Switch");
+        fields.put("product-description", "Red Cherry MX Switch Edition");
+        fields.put("product-slug", "red-switch");
+        fields.put("product-price", "2999.00");
+        fields.put("product-stock", "15");
+        fields.put("product-order", "1");
+
+        step.learning.java231web.services.form.FormParseResult formResult = new step.learning.java231web.services.form.FormParseResult() {
+            @Override
+            public Map<String, String> getFields() {
+                return fields;
+            }
+
+            @Override
+            public Map<String, org.apache.commons.fileupload2.core.FileItem> getFiles() {
+                return java.util.Collections.emptyMap();
+            }
+        };
+
+        step.learning.java231web.services.form.IFormParseService mockFormService = req -> formResult;
+        AdminServlet servletWithMock = new AdminServlet(null, mockFormService, null, null, null, null);
+
+        TestContext ctx = new TestContext();
+        HttpServletRequest request = createMockRequest("/product-version", ctx);
+        HttpServletResponse response = createMockResponse(ctx);
+
+        servletWithMock.doPost(request, response);
+
+        assertNotNull(ctx.attributes.get("viewModel"));
+        step.learning.java231web.data.models.AdminProductViewModel vm =
+                (step.learning.java231web.data.models.AdminProductViewModel) ctx.attributes.get("viewModel");
+        assertNotNull(vm.getOkMessage());
+        assertTrue(vm.getOkMessage().contains("Red Switch"));
+        assertEquals("product", ctx.attributes.get("adminPage"));
     }
 
     @Test

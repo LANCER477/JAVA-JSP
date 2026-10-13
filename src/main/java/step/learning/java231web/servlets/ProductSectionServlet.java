@@ -10,8 +10,10 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import java.sql.SQLException;
+import java.util.Arrays;
 import java.util.List;
 import step.learning.java231web.data.dao.ProductSectionDao;
+import step.learning.java231web.data.dto.Product;
 import step.learning.java231web.data.dto.ProductSection;
 import step.learning.java231web.rest.RestPagination;
 import step.learning.java231web.rest.RestResponse;
@@ -61,18 +63,21 @@ public class ProductSectionServlet extends HttpServlet {
             try {
                 page = Integer.parseInt(pageParam.trim());
                 if (page < 1) {
-                    sendRest(resp, HttpServletResponse.SC_BAD_REQUEST, RestStatus.QueryParameterMalformed,
-                            "Query parameter 'page' must be greater than 0", null);
+                    sendRest(req, resp, HttpServletResponse.SC_BAD_REQUEST, RestStatus.QueryParameterMalformed,
+                            "Query parameter 'page' must be greater than 0", null, "object");
                     return;
                 }
             } catch (NumberFormatException ex) {
-                sendRest(resp, HttpServletResponse.SC_BAD_REQUEST, RestStatus.QueryParameterMalformed,
-                        "Query parameter 'page' must be a valid integer", null);
+                sendRest(req, resp, HttpServletResponse.SC_BAD_REQUEST, RestStatus.QueryParameterMalformed,
+                        "Query parameter 'page' must be a valid integer", null, "object");
                 return;
             }
         }
 
-        String perPageParam = req.getParameter("perPage");
+        String perPageParam = req.getParameter("pageSize");
+        if (perPageParam == null || perPageParam.trim().isEmpty()) {
+            perPageParam = req.getParameter("perPage");
+        }
         if (perPageParam == null || perPageParam.trim().isEmpty()) {
             perPageParam = req.getParameter("size");
         }
@@ -80,13 +85,13 @@ public class ProductSectionServlet extends HttpServlet {
             try {
                 perPage = Integer.parseInt(perPageParam.trim());
                 if (perPage < 1) {
-                    sendRest(resp, HttpServletResponse.SC_BAD_REQUEST, RestStatus.QueryParameterMalformed,
-                            "Query parameter 'perPage' must be greater than 0", null);
+                    sendRest(req, resp, HttpServletResponse.SC_BAD_REQUEST, RestStatus.QueryParameterMalformed,
+                            "Query parameter 'pageSize' must be greater than 0", null, "object");
                     return;
                 }
             } catch (NumberFormatException ex) {
-                sendRest(resp, HttpServletResponse.SC_BAD_REQUEST, RestStatus.QueryParameterMalformed,
-                        "Query parameter 'perPage' must be a valid integer", null);
+                sendRest(req, resp, HttpServletResponse.SC_BAD_REQUEST, RestStatus.QueryParameterMalformed,
+                        "Query parameter 'pageSize' must be a valid integer", null, "object");
                 return;
             }
         }
@@ -99,35 +104,90 @@ public class ProductSectionServlet extends HttpServlet {
                 long total = productSectionDao.getSectionsCount();
                 pagination.setTotal((int) total);
                 List<ProductSection> sections = productSectionDao.getSections(pagination);
-                sendRest(resp, HttpServletResponse.SC_OK, RestStatus.Ok, sections, pagination);
+                sendRest(req, resp, HttpServletResponse.SC_OK, RestStatus.Ok, sections, pagination, "array");
             } else {
                 // Запит конкретного розділу за слагом з каскадом товарів
                 ProductSection section = productSectionDao.getSectionBySlug(slug, pagination);
                 if (section == null) {
-                    sendRest(resp, HttpServletResponse.SC_NOT_FOUND, RestStatus.NotFound, "Section not found", null);
+                    sendRest(req, resp, HttpServletResponse.SC_NOT_FOUND, RestStatus.NotFound, "Section not found", null, "object");
                     return;
                 }
 
                 long totalProducts = productSectionDao.getProductsCountBySectionSlug(slug);
                 pagination.setTotal((int) totalProducts);
-                sendRest(resp, HttpServletResponse.SC_OK, RestStatus.Ok, section, pagination);
+                sendRest(req, resp, HttpServletResponse.SC_OK, RestStatus.Ok, section, pagination, "object");
             }
         } catch (SQLException ex) {
-            sendRest(resp, HttpServletResponse.SC_INTERNAL_SERVER_ERROR, RestStatus.DatabaseError,
-                    ex.getMessage(), null);
+            sendRest(req, resp, HttpServletResponse.SC_INTERNAL_SERVER_ERROR, RestStatus.DatabaseError,
+                    ex.getMessage(), null, "object");
         } catch (Exception ex) {
-            sendRest(resp, HttpServletResponse.SC_INTERNAL_SERVER_ERROR, RestStatus.InternalServerError,
-                    ex.getMessage(), null);
+            sendRest(req, resp, HttpServletResponse.SC_INTERNAL_SERVER_ERROR, RestStatus.InternalServerError,
+                    ex.getMessage(), null, "object");
         }
     }
 
-    private void sendRest(HttpServletResponse resp, int httpStatusCode, RestStatus status, Object data, RestPagination pagination) throws IOException {
+    private void sendRest(HttpServletRequest req, HttpServletResponse resp, int httpStatusCode, RestStatus status, Object data, RestPagination pagination, String dataType) throws IOException {
         resp.setStatus(httpStatusCode);
+        resp.setContentType("application/json; charset=UTF-8");
+
+        String baseUrl = (req != null && req.getServerName() != null)
+                ? req.getScheme() + "://" + req.getServerName() + ":" + req.getServerPort() + req.getContextPath()
+                : "http://localhost:8080/java231web";
+
+        normalizeImageUrls(data, baseUrl);
+
         RestResponse restResponse = new RestResponse(status, data);
+        if (restResponse.getMeta() != null) {
+            restResponse.getMeta().setServiceName("API 'Product Sections'");
+            restResponse.getMeta().setDataType(dataType);
+            restResponse.getMeta().setManipulations(Arrays.asList("GET"));
+        }
         if (pagination != null) {
             restResponse.setPagination(pagination);
         }
-        restResponse.getMeta().setService("ProductSectionServlet");
         resp.getWriter().print(gson.toJson(restResponse));
+    }
+
+    @SuppressWarnings("unchecked")
+    private void normalizeImageUrls(Object data, String baseUrl) {
+        if (data instanceof List) {
+            for (Object item : (List<?>) data) {
+                if (item instanceof ProductSection) {
+                    normalizeSection((ProductSection) item, baseUrl);
+                }
+            }
+        } else if (data instanceof ProductSection) {
+            normalizeSection((ProductSection) data, baseUrl);
+        }
+    }
+
+    private void normalizeSection(ProductSection section, String baseUrl) {
+        if (section == null) return;
+        section.setImageUrl(fixImageUrl(section.getImageUrl(), baseUrl));
+        if (section.getProducts() != null) {
+            for (Product p : section.getProducts()) {
+                p.setImageUrl(fixImageUrl(p.getImageUrl(), baseUrl));
+            }
+        }
+        if (section.getChildren() != null) {
+            for (ProductSection child : section.getChildren()) {
+                normalizeSection(child, baseUrl);
+            }
+        }
+    }
+
+    private String fixImageUrl(String raw, String baseUrl) {
+        if (raw == null || raw.trim().isEmpty() || raw.equals("null")) {
+            return null;
+        }
+        if (raw.startsWith("http://localhost:8080/") || raw.startsWith("http://127.0.0.1:8080/")) {
+            return raw;
+        }
+        String filename = raw;
+        int slash = filename.lastIndexOf('/');
+        if (slash >= 0) {
+            filename = filename.substring(slash + 1);
+        }
+        return baseUrl + "/storage/" + filename;
     }
 }

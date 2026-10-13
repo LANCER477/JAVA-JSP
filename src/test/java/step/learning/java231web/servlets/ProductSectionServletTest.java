@@ -83,6 +83,11 @@ public class ProductSectionServletTest {
                 section.setTitle("Телевізори");
                 section.setSlug("tv");
                 section.setImageUrl("" + "tv_section_image.webp");
+                ProductSection child = new ProductSection();
+                child.setId("sec-oled");
+                child.setTitle("OLED TV");
+                child.setImageUrl("oled_child.webp");
+                section.getChildren().add(child);
                 list.add(section);
                 return list;
             }
@@ -182,5 +187,28 @@ public class ProductSectionServletTest {
         RestResponse resp = gson.fromJson(json, RestResponse.class);
         assertNotNull(resp);
         assertEquals(443, resp.getStatus().getCode()); // QueryParameterMalformed
+    }
+
+    @Test
+    public void testGetSectionsReturnsTreeWithPageSizeAndNormalizedChildren() throws Exception {
+        ResponseContext ctx = new ResponseContext();
+        Map<String, String> params = new HashMap<>();
+        params.put("pageSize", "3");
+        HttpServletRequest request = createMockRequest(null, params);
+        HttpServletResponse response = createMockResponse(ctx);
+
+        servlet.doGet(request, response);
+
+        assertEquals(200, ctx.status);
+        String json = ctx.body.toString();
+        RestResponse resp = gson.fromJson(json, RestResponse.class);
+
+        assertNotNull(resp);
+        assertEquals(200, resp.getStatus().getCode());
+        assertTrue(resp.getStatus().isOk());
+        assertNotNull(resp.getPagination());
+        assertEquals(3, resp.getPagination().getPageSize());
+        assertTrue(json.contains("tv_section_image.webp"));
+        assertTrue(json.contains("oled_child.webp"));
     }
 }

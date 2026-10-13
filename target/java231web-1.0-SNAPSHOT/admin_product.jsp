@@ -1,128 +1,350 @@
-<%@page import="java.util.Map"%>
-<%@page import="java.util.List"%>
-<%@page contentType="text/html" pageEncoding="UTF-8"%>
-<%
-    List<String> sections = (List<String>) request.getAttribute("sections");
-    String formMessage = (String) request.getAttribute("formMessage");
-    String formError = (String) request.getAttribute("formError");
-    Map<String, String> formFields = (Map<String, String>) request.getAttribute("formFields");
-    Map<String, String> validationErrors = (Map<String, String>) request.getAttribute("validationErrors");
-    String savedFileName = (String) request.getAttribute("savedFileName");
+<%@page import="step.learning.java231web.data.dto.ProductSection" %>
+    <%@page import="step.learning.java231web.data.models.AdminProductViewModel" %>
+        <%@page contentType="text/html" pageEncoding="UTF-8" %>
+            <% AdminProductViewModel viewModel=(AdminProductViewModel) request.getAttribute("viewModel"); String
+                formMessage=(String) request.getAttribute("formMessage"); String formError=(String)
+                request.getAttribute("formError"); String savedFileName=(String) request.getAttribute("savedFileName");
+                %>
 
-    String sectionIdVal = formFields != null ? formFields.get("product-section-id") : null;
-    String titleVal = formFields != null && formFields.get("product-title") != null ? formFields.get("product-title") : "";
-    String descVal = formFields != null && formFields.get("product-description") != null ? formFields.get("product-description") : "";
-    String slugVal = formFields != null && formFields.get("product-slug") != null ? formFields.get("product-slug") : "";
-    String priceVal = formFields != null && formFields.get("product-price") != null ? formFields.get("product-price") : "";
-    String stockVal = formFields != null && formFields.get("product-stock") != null ? formFields.get("product-stock") : "";
-    String orderVal = formFields != null && formFields.get("product-order") != null ? formFields.get("product-order") : "";
+                <% if (viewModel==null) { %>
+                    <h1 style="color:maroon">Model transfer error</h1>
+                    <% } else { %>
 
-    String sectionErr = validationErrors != null ? validationErrors.get("product-section-id") : null;
-    String titleErr = validationErrors != null ? validationErrors.get("product-title") : null;
-    String descErr = validationErrors != null ? validationErrors.get("product-description") : null;
-    String slugErr = validationErrors != null ? validationErrors.get("product-slug") : null;
-    String priceErr = validationErrors != null ? validationErrors.get("product-price") : null;
-    String stockErr = validationErrors != null ? validationErrors.get("product-stock") : null;
-    String orderErr = validationErrors != null ? validationErrors.get("product-order") : null;
-    String imageErr = validationErrors != null ? validationErrors.get("product-image") : null;
-%>
-<h3>Product</h3>
+                        <style>
+                            .admin-forms-table {
+                                width: 100%;
+                                border-collapse: separate;
+                                border-spacing: 20px 0;
+                                margin: 15px 0 25px 0;
+                            }
 
-<% if (formMessage != null) { %>
-    <div style="background: #e8f8f5; border: 1px solid #2ecc71; color: #27ae60; padding: 12px; border-radius: 6px; margin-bottom: 15px;">
-        <b><%= formMessage %></b>
-        <% if (savedFileName != null) { %>
-            <div>Збережено у сховищі: <code><%= savedFileName %></code></div>
-        <% } %>
-    </div>
-<% } %>
+                            .admin-form-col {
+                                vertical-align: top;
+                                width: 50%;
+                                background: #ffffff;
+                                border: 1px solid #e2e8f0;
+                                padding: 24px;
+                                border-radius: 10px;
+                                box-shadow: 0 4px 12px rgba(0, 0, 0, 0.04);
+                                box-sizing: border-box;
+                            }
 
-<% if (formError != null) { %>
-    <div style="background: #fdf2e9; border: 1px solid #e74c3c; color: #c0392b; padding: 12px; border-radius: 6px; margin-bottom: 15px;">
-        <b>Помилка:</b> <%= formError %>
-        <% if (validationErrors != null && !validationErrors.isEmpty()) { %>
-            <ul style="margin: 8px 0 0 20px; padding: 0;">
-                <% for (Map.Entry<String, String> err : validationErrors.entrySet()) { %>
-                    <li><b><%= err.getKey() %></b>: <%= err.getValue() %></li>
-                <% } %>
-            </ul>
-        <% } %>
-    </div>
-<% } %>
+                            .admin-form-col h2 {
+                                margin-top: 0;
+                                margin-bottom: 16px;
+                                color: #1e293b;
+                                font-size: 1.4rem;
+                                border-bottom: 2px solid #f1f5f9;
+                                padding-bottom: 10px;
+                            }
 
-<form method="post" action="<%= request.getContextPath() %>/admin/product" enctype="multipart/form-data" novalidate style="max-width: 600px; display: flex; flex-direction: column; gap: 14px; background: #fafafa; border: 1px solid #e0e0e0; padding: 20px; border-radius: 8px;">
-    <div>
-        <label for="product-section-id"><b>Розділ товару (product-section-id):</b></label><br>
-        <select id="product-section-id" name="product-section-id" style="width: 100%; padding: 8px 10px; font-size: 1rem; border: <%= sectionErr != null ? "1.5px solid #e74c3c; background-color: #fff6f6;" : "1px solid #ccc;" %> border-radius: 4px; margin-top: 4px;">
-            <option value="">-- Оберіть розділ товару --</option>
-            <option value="3a27db1d-d97e-406f-a36a-148b4f724a6e" <%= "3a27db1d-d97e-406f-a36a-148b4f724a6e".equals(sectionIdVal) ? "selected" : "" %>>Garminfull</option>
-            <option value="5b38ec2e-e08f-4170-b47b-259c50835b7f" <%= "5b38ec2e-e08f-4170-b47b-259c50835b7f".equals(sectionIdVal) ? "selected" : "" %>>Телевізори</option>
-            <option value="6c49fd3f-f190-4281-c58c-360d61946c8a" <%= "6c49fd3f-f190-4281-c58c-360d61946c8a".equals(sectionIdVal) ? "selected" : "" %>>Консолі</option>
-            <option value="7d5a0e4a-02a1-4392-d69d-471e72057d9b" <%= "7d5a0e4a-02a1-4392-d69d-471e72057d9b".equals(sectionIdVal) ? "selected" : "" %>>Б/у Apple</option>
-        </select>
-        <% if (sectionErr != null) { %>
-            <div style="color: #c0392b; font-size: 0.85rem; margin-top: 4px; font-weight: 500;">&#9888; <%= sectionErr %></div>
-        <% } %>
-    </div>
+                            .admin-form {
+                                display: flex;
+                                flex-direction: column;
+                                gap: 6px;
+                                width: 100%;
+                                box-sizing: border-box;
+                            }
 
-    <div>
-        <label for="product-title"><b>Назва товару (product-title):</b></label><br>
-        <input type="text" id="product-title" name="product-title" value="<%= titleVal %>" placeholder="Наприклад: Новітній Ґаджет 'Їжачок-1'" style="width: 100%; padding: 8px 10px; font-size: 1rem; border: <%= titleErr != null ? "1.5px solid #e74c3c; background-color: #fff6f6;" : "1px solid #ccc;" %> border-radius: 4px; margin-top: 4px;" />
-        <% if (titleErr != null) { %>
-            <div style="color: #c0392b; font-size: 0.85rem; margin-top: 4px; font-weight: 500;">&#9888; <%= titleErr %></div>
-        <% } %>
-    </div>
+                            .admin-form-group {
+                                display: flex;
+                                flex-direction: column;
+                                width: 100%;
+                                box-sizing: border-box;
+                                margin-bottom: 6px;
+                            }
 
-    <div>
-        <label for="product-description"><b>Опис товару (product-description):</b></label><br>
-        <textarea id="product-description" name="product-description" rows="3" placeholder="Опис товару винятково українськими літерами" style="width: 100%; padding: 8px 10px; font-size: 1rem; border: <%= descErr != null ? "1.5px solid #e74c3c; background-color: #fff6f6;" : "1px solid #ccc;" %> border-radius: 4px; margin-top: 4px;"><%= descVal %></textarea>
-        <% if (descErr != null) { %>
-            <div style="color: #c0392b; font-size: 0.85rem; margin-top: 4px; font-weight: 500;">&#9888; <%= descErr %></div>
-        <% } %>
-    </div>
+                            .admin-form label {
+                                display: block !important;
+                                font-weight: 600 !important;
+                                font-size: 0.9rem !important;
+                                color: #334155 !important;
+                                margin-bottom: 3px !important;
+                            }
 
-    <div>
-        <label for="product-slug"><b>Слаг товару (product-slug):</b></label><br>
-        <input type="text" id="product-slug" name="product-slug" value="<%= slugVal %>" placeholder="novitnii-gadget-yizhachok" style="width: 100%; padding: 8px 10px; font-size: 1rem; border: <%= slugErr != null ? "1.5px solid #e74c3c; background-color: #fff6f6;" : "1px solid #ccc;" %> border-radius: 4px; margin-top: 4px;" />
-        <% if (slugErr != null) { %>
-            <div style="color: #c0392b; font-size: 0.85rem; margin-top: 4px; font-weight: 500;">&#9888; <%= slugErr %></div>
-        <% } %>
-    </div>
+                            .admin-form input,
+                            .admin-form select,
+                            .admin-form textarea {
+                                width: 100% !important;
+                                box-sizing: border-box !important;
+                                display: block !important;
+                                height: 38px;
+                                padding: 6px 12px !important;
+                                font-size: 0.95rem !important;
+                                font-family: inherit !important;
+                                color: #1e293b !important;
+                                background-color: #ffffff !important;
+                                border: 1px solid #cbd5e1 !important;
+                                border-radius: 6px !important;
+                                outline: none !important;
+                                transition: border-color 0.15s ease, box-shadow 0.15s ease !important;
+                            }
 
-    <div style="display: flex; gap: 12px;">
-        <div style="flex: 1;">
-            <label for="product-price"><b>Ціна (product-price):</b></label><br>
-            <input type="text" id="product-price" name="product-price" value="<%= priceVal %>" placeholder="15999.00" style="width: 100%; padding: 8px 10px; font-size: 1rem; border: <%= priceErr != null ? "1.5px solid #e74c3c; background-color: #fff6f6;" : "1px solid #ccc;" %> border-radius: 4px; margin-top: 4px;" />
-            <% if (priceErr != null) { %>
-                <div style="color: #c0392b; font-size: 0.85rem; margin-top: 4px; font-weight: 500;">&#9888; <%= priceErr %></div>
-            <% } %>
-        </div>
-        <div style="flex: 1;">
-            <label for="product-stock"><b>Кількість (product-stock):</b></label><br>
-            <input type="text" id="product-stock" name="product-stock" value="<%= stockVal %>" placeholder="25" style="width: 100%; padding: 8px 10px; font-size: 1rem; border: <%= stockErr != null ? "1.5px solid #e74c3c; background-color: #fff6f6;" : "1px solid #ccc;" %> border-radius: 4px; margin-top: 4px;" />
-            <% if (stockErr != null) { %>
-                <div style="color: #c0392b; font-size: 0.85rem; margin-top: 4px; font-weight: 500;">&#9888; <%= stockErr %></div>
-            <% } %>
-        </div>
-        <div style="flex: 1;">
-            <label for="product-order"><b>Порядок (product-order):</b></label><br>
-            <input type="text" id="product-order" name="product-order" value="<%= orderVal %>" placeholder="1" style="width: 100%; padding: 8px 10px; font-size: 1rem; border: <%= orderErr != null ? "1.5px solid #e74c3c; background-color: #fff6f6;" : "1px solid #ccc;" %> border-radius: 4px; margin-top: 4px;" />
-            <% if (orderErr != null) { %>
-                <div style="color: #c0392b; font-size: 0.85rem; margin-top: 4px; font-weight: 500;">&#9888; <%= orderErr %></div>
-            <% } %>
-        </div>
-    </div>
+                            .admin-form input:focus,
+                            .admin-form select:focus,
+                            .admin-form textarea:focus {
+                                border-color: #0284c7 !important;
+                                box-shadow: 0 0 0 3px rgba(2, 132, 199, 0.18) !important;
+                            }
 
-    <div>
-        <label for="product-image"><b>Зображення товару (product-image):</b></label><br>
-        <input type="file" id="product-image" name="product-image" style="width: 100%; padding: 6px 0; margin-top: 4px; <%= imageErr != null ? "border: 1.5px solid #e74c3c; padding: 6px; background-color: #fff6f6; border-radius: 4px;" : "" %>" />
-        <small style="color: #666;">Підтримуються кириличні назви файлів (наприклад, <code>Зображення_Ґаджета_Їжак.jpg</code>). Максимальний розмір: 10 МБ.</small>
-        <% if (imageErr != null) { %>
-            <div style="color: #c0392b; font-size: 0.85rem; margin-top: 4px; font-weight: 500;">&#9888; <%= imageErr %></div>
-        <% } %>
-    </div>
+                            .admin-form input[type="file"] {
+                                height: auto !important;
+                                padding: 8px 10px !important;
+                                background-color: #f8fafc !important;
+                                border: 1px dashed #94a3b8 !important;
+                                cursor: pointer !important;
+                            }
 
-    <div style="margin-top: 8px;">
-        <button type="submit" style="padding: 10px 24px; font-size: 1rem; font-weight: bold; background: #2980b9; color: #fff; border: none; border-radius: 4px; cursor: pointer;">Додати товар</button>
-    </div>
-</form>
+                            .admin-form input::placeholder,
+                            .admin-form textarea::placeholder {
+                                color: #94a3b8;
+                            }
+
+                            .admin-form .row-3 {
+                                display: grid !important;
+                                grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+                                gap: 12px !important;
+                                width: 100% !important;
+                                box-sizing: border-box !important;
+                                margin-bottom: 6px;
+                                align-items: end !important;
+                            }
+
+                            .admin-form .row-3 > div {
+                                display: flex !important;
+                                flex-direction: column !important;
+                                justify-content: flex-end !important;
+                                min-width: 0 !important;
+                            }
+
+                            .admin-form .row-3 label {
+                                min-height: 38px !important;
+                                line-height: 1.25 !important;
+                                display: flex !important;
+                                align-items: flex-end !important;
+                                margin-bottom: 4px !important;
+                            }
+
+                            .admin-form button {
+                                align-self: flex-start !important;
+                                margin-top: 10px !important;
+                                padding: 10px 26px !important;
+                                font-size: 0.95rem !important;
+                                font-weight: 600 !important;
+                                color: #ffffff !important;
+                                background-color: #0284c7 !important;
+                                border: none !important;
+                                border-radius: 6px !important;
+                                cursor: pointer !important;
+                                box-shadow: 0 2px 4px rgba(2, 132, 199, 0.25) !important;
+                                transition: background-color 0.15s ease, transform 0.1s ease !important;
+                            }
+
+                            .admin-form button:hover {
+                                background-color: #0369a1 !important;
+                            }
+
+                            .admin-form button:active {
+                                transform: translateY(1px);
+                            }
+
+                            .admin-status-bar {
+                                margin-top: 20px;
+                                padding: 14px 18px;
+                                border-radius: 8px;
+                                background: #ffffff;
+                                border: 1px solid #e2e8f0;
+                                font-family: Consolas, "Courier New", monospace;
+                                font-size: 0.95rem;
+                                line-height: 1.6;
+                                box-shadow: 0 2px 6px rgba(0, 0, 0, 0.03);
+                            }
+
+                            .admin-status-ok {
+                                color: #16a34a;
+                                font-weight: bold;
+                            }
+
+                            .admin-status-ex {
+                                color: #dc2626;
+                                font-weight: bold;
+                            }
+                        </style>
+
+                        <% if (formMessage !=null || viewModel.getOkMessage() !=null) { %>
+                            <div
+                                style="background: #f0fdf4; border: 1px solid #86efac; color: #166534; padding: 12px 16px; border-radius: 8px; margin-bottom: 16px;">
+                                <b>&#10004; <%= viewModel.getOkMessage() !=null ? viewModel.getOkMessage() : formMessage
+                                        %></b>
+                                <% if (savedFileName !=null) { %>
+                                    <div style="margin-top: 4px; font-size: 0.9rem;">Збережено файл у сховищі:
+                                        <code><%= savedFileName %></code></div>
+                                    <% } %>
+                            </div>
+                            <% } %>
+
+                                <% if (formError !=null || viewModel.getExceptionMessage() !=null) { %>
+                                    <div
+                                        style="background: #fef2f2; border: 1px solid #fca5a5; color: #991b1b; padding: 12px 16px; border-radius: 8px; margin-bottom: 16px;">
+                                        <b>&#9888; Помилка:</b>
+                                        <%= viewModel.getExceptionMessage() !=null ? viewModel.getExceptionMessage() :
+                                            formError %>
+                                    </div>
+                                    <% } %>
+
+                                        <table class="admin-forms-table">
+                                            <tbody>
+                                                <tr>
+                                                    <td class="admin-form-col">
+                                                        <h2>Product</h2>
+                                                        <form action="product" method="post"
+                                                            enctype="multipart/form-data" class="admin-form">
+                                                            <div class="admin-form-group">
+                                                                <label for="product-section-id">Виберіть товарну
+                                                                    групу:</label>
+                                                                <select id="product-section-id"
+                                                                    name="product-section-id">
+                                                                    <% for(ProductSection ps :
+                                                                        viewModel.getProductSections()) { %>
+                                                                        <option value="<%= ps.getId() %>">
+                                                                            <%= ps.getTitle() %>
+                                                                        </option>
+                                                                        <% } %>
+                                                                </select>
+                                                            </div>
+
+                                                            <div class="admin-form-group">
+                                                                <label for="product-title">Назва товару:</label>
+                                                                <input type="text" id="product-title"
+                                                                    name="product-title"
+                                                                    placeholder="Наприклад: Новітній Ґаджет" />
+                                                            </div>
+
+                                                            <div class="admin-form-group">
+                                                                <label for="product-description">Опис товару:</label>
+                                                                <input type="text" id="product-description"
+                                                                    name="product-description"
+                                                                    placeholder="Детальний опис товару" />
+                                                            </div>
+
+                                                            <div class="admin-form-group">
+                                                                <label for="product-slug">Slug товару:</label>
+                                                                <input type="text" id="product-slug" name="product-slug"
+                                                                    placeholder="novitnii-gadget" />
+                                                            </div>
+
+                                                            <div class="row-3">
+                                                                <div>
+                                                                    <label for="product-price">Ціна товару:</label>
+                                                                    <input type="number" step="0.01" min="0.01"
+                                                                        id="product-price" name="product-price"
+                                                                        placeholder="15999.00" />
+                                                                </div>
+                                                                <div>
+                                                                    <label for="product-stock">Кількість на
+                                                                        складі:</label>
+                                                                    <input type="number" step="1" id="product-stock"
+                                                                        name="product-stock" placeholder="10" />
+                                                                </div>
+                                                                <div>
+                                                                    <label for="product-order">Порядок у
+                                                                        переліку:</label>
+                                                                    <input type="number" step="1" id="product-order"
+                                                                        name="product-order" placeholder="1" />
+                                                                </div>
+                                                            </div>
+
+                                                            <div class="admin-form-group">
+                                                                <label for="product-image">Головне зображення:</label>
+                                                                <input type="file" id="product-image"
+                                                                    name="product-image" />
+                                                            </div>
+
+                                                            <button type="submit">Додати</button>
+                                                        </form>
+                                                    </td>
+
+                                                    <td class="admin-form-col">
+                                                        <h2>Product Version</h2>
+                                                        <form action="product-version" method="post"
+                                                            enctype="multipart/form-data" class="admin-form">
+                                                            <div class="admin-form-group">
+                                                                <label for="version-product-id">Виберіть товар:</label>
+                                                                <select id="version-product-id" name="product-id">
+                                                                    <% for(ProductSection ps :
+                                                                        viewModel.getProductSections()) { %>
+                                                                        <option value="<%= ps.getId() %>">
+                                                                            <%= ps.getTitle() %>
+                                                                        </option>
+                                                                        <% } %>
+                                                                </select>
+                                                            </div>
+
+                                                            <div class="admin-form-group">
+                                                                <label for="version-title">Доповнення до назви
+                                                                    товару:</label>
+                                                                <input type="text" id="version-title"
+                                                                    name="product-title"
+                                                                    placeholder="Наприклад: Cosmic Red / 256GB" />
+                                                            </div>
+
+                                                            <div class="admin-form-group">
+                                                                <label for="version-description">Доповнення до опису
+                                                                    товару:</label>
+                                                                <input type="text" id="version-description"
+                                                                    name="product-description"
+                                                                    placeholder="Особливості цієї версії товару" />
+                                                            </div>
+
+                                                            <div class="admin-form-group">
+                                                                <label for="version-slug">Доповнення до Slug
+                                                                    товару:</label>
+                                                                <input type="text" id="version-slug" name="product-slug"
+                                                                    placeholder="cosmic-red" />
+                                                            </div>
+
+                                                            <div class="row-3">
+                                                                <div>
+                                                                    <label for="version-price">Ціна версії:</label>
+                                                                    <input type="number" step="0.01" min="0.01"
+                                                                        id="version-price" name="product-price"
+                                                                        placeholder="16999.00" />
+                                                                </div>
+                                                                <div>
+                                                                    <label for="version-stock">Кількість на
+                                                                        складі:</label>
+                                                                    <input type="number" step="1" id="version-stock"
+                                                                        name="product-stock" placeholder="5" />
+                                                                </div>
+                                                                <div>
+                                                                    <label for="version-order">Порядок у
+                                                                        переліку:</label>
+                                                                    <input type="number" step="1" id="version-order"
+                                                                        name="product-order" placeholder="1" />
+                                                                </div>
+                                                            </div>
+
+                                                            <div class="admin-form-group">
+                                                                <label for="version-image">Зображення:</label>
+                                                                <input type="file" id="version-image"
+                                                                    name="product-image" />
+                                                            </div>
+
+                                                            <button type="submit">Додати</button>
+                                                        </form>
+                                                    </td>
+                                                </tr>
+                                            </tbody>
+                                        </table>
+
+                                        <div class="admin-status-bar">
+                                            OK: <span class="admin-status-ok">
+                                                <%= viewModel.getOkMessage() %>
+                                            </span>
+                                            <br />
+                                            Ex: <span class="admin-status-ex">
+                                                <%= viewModel.getExceptionMessage() %>
+                                            </span>
+                                        </div>
+
+                                        <% } %>
