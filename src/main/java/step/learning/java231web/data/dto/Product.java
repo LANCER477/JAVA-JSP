@@ -3,7 +3,9 @@ package step.learning.java231web.data.dto;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Timestamp;
+import java.util.ArrayList;
 import java.util.Date;
+import java.util.List;
 
 public class Product {
     private String id;
@@ -17,6 +19,7 @@ public class Product {
     private String imageUrl;
     private Date deletedAt;
     private Integer orderInPrice;
+    private List<ProductVersion> versions = new ArrayList<>();
 
     public Product() {
     }
@@ -148,6 +151,15 @@ public class Product {
         if (orderInPrice != null) {
             this.order = orderInPrice;
         }
+        return this;
+    }
+
+    public List<ProductVersion> getVersions() {
+        return versions;
+    }
+
+    public Product setVersions(List<ProductVersion> versions) {
+        this.versions = versions != null ? versions : new ArrayList<>();
         return this;
     }
 }

@@ -8,14 +8,14 @@ import java.util.Date;
 public class ProductVersion {
     private String id;
     private String productId;
-    private String title;
-    private String description;
-    private String slug;
-    private double price;
-    private int stock;
-    private int order;
+    private String titleAddon;
+    private String descriptionAddon;
+    private String slugAddon;
     private String imageUrl;
     private Date deletedAt;
+    private int orderInPrice;
+    private double price;
+    private int stock;
 
     public ProductVersion() {
     }
@@ -25,13 +25,11 @@ public class ProductVersion {
             String id = null;
             try {
                 id = rs.getString("product_version_id");
-            } catch (SQLException ignored) {
-            }
+            } catch (SQLException ignored) {}
             if (id == null) {
                 try {
                     id = rs.getString("id");
-                } catch (SQLException ignored) {
-                }
+                } catch (SQLException ignored) {}
             }
             if (id == null) {
                 return null;
@@ -42,24 +40,58 @@ public class ProductVersion {
             try {
                 version.setProductId(rs.getString("product_id"));
             } catch (SQLException ignored) {}
+
+            String title = null;
             try {
-                version.setTitle(rs.getString("product_version_title"));
+                title = rs.getString("product_version_title_addon");
             } catch (SQLException ignored) {}
+            if (title == null) {
+                try {
+                    title = rs.getString("product_version_title");
+                } catch (SQLException ignored) {}
+            }
+            version.setTitleAddon(title);
+
+            String desc = null;
             try {
-                version.setDescription(rs.getString("product_version_description"));
+                desc = rs.getString("product_version_description_addon");
             } catch (SQLException ignored) {}
+            if (desc == null) {
+                try {
+                    desc = rs.getString("product_version_description");
+                } catch (SQLException ignored) {}
+            }
+            version.setDescriptionAddon(desc);
+
+            String slug = null;
             try {
-                version.setSlug(rs.getString("product_version_slug"));
+                slug = rs.getString("product_version_slug_addon");
             } catch (SQLException ignored) {}
+            if (slug == null) {
+                try {
+                    slug = rs.getString("product_version_slug");
+                } catch (SQLException ignored) {}
+            }
+            version.setSlugAddon(slug);
+
             try {
                 version.setPrice(rs.getDouble("product_version_price"));
             } catch (SQLException ignored) {}
             try {
                 version.setStock(rs.getInt("product_version_stock"));
             } catch (SQLException ignored) {}
+
+            int order = 1;
             try {
-                version.setOrder(rs.getInt("product_version_order"));
+                order = rs.getInt("product_version_order_in_price");
             } catch (SQLException ignored) {}
+            if (order == 0) {
+                try {
+                    order = rs.getInt("product_version_order");
+                } catch (SQLException ignored) {}
+            }
+            version.setOrderInPrice(order);
+
             try {
                 version.setImageUrl(rs.getString("product_version_image"));
             } catch (SQLException ignored) {}
@@ -94,30 +126,57 @@ public class ProductVersion {
         return this;
     }
 
+    public String getTitleAddon() {
+        return titleAddon;
+    }
+
+    public ProductVersion setTitleAddon(String titleAddon) {
+        this.titleAddon = titleAddon;
+        return this;
+    }
+
     public String getTitle() {
-        return title;
+        return titleAddon;
     }
 
     public ProductVersion setTitle(String title) {
-        this.title = title;
+        this.titleAddon = title;
+        return this;
+    }
+
+    public String getDescriptionAddon() {
+        return descriptionAddon;
+    }
+
+    public ProductVersion setDescriptionAddon(String descriptionAddon) {
+        this.descriptionAddon = descriptionAddon;
         return this;
     }
 
     public String getDescription() {
-        return description;
+        return descriptionAddon;
     }
 
     public ProductVersion setDescription(String description) {
-        this.description = description;
+        this.descriptionAddon = description;
+        return this;
+    }
+
+    public String getSlugAddon() {
+        return slugAddon;
+    }
+
+    public ProductVersion setSlugAddon(String slugAddon) {
+        this.slugAddon = slugAddon;
         return this;
     }
 
     public String getSlug() {
-        return slug;
+        return slugAddon;
     }
 
     public ProductVersion setSlug(String slug) {
-        this.slug = slug;
+        this.slugAddon = slug;
         return this;
     }
 
@@ -139,12 +198,21 @@ public class ProductVersion {
         return this;
     }
 
+    public int getOrderInPrice() {
+        return orderInPrice;
+    }
+
+    public ProductVersion setOrderInPrice(int orderInPrice) {
+        this.orderInPrice = orderInPrice;
+        return this;
+    }
+
     public int getOrder() {
-        return order;
+        return orderInPrice;
     }
 
     public ProductVersion setOrder(int order) {
-        this.order = order;
+        this.orderInPrice = order;
         return this;
     }
 

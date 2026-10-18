@@ -37,6 +37,8 @@ public class ProductSectionServletTest {
         StringWriter body = new StringWriter();
     }
 
+    private step.learning.java231web.data.dao.ProductVersionDao fakeVersionDao;
+
     @BeforeEach
     public void setUp() {
         gson = new Gson();
@@ -93,7 +95,27 @@ public class ProductSectionServletTest {
             }
         };
 
-        servlet = new ProductSectionServlet(fakeDao, gson);
+        fakeVersionDao = new step.learning.java231web.data.dao.ProductVersionDao(null) {
+            @Override
+            public void ensureInstalled() {
+            }
+
+            @Override
+            public List<step.learning.java231web.data.dto.ProductVersion> getVersionsByProductId(String productId) {
+                List<step.learning.java231web.data.dto.ProductVersion> vList = new ArrayList<>();
+                if ("p-1".equals(productId)) {
+                    step.learning.java231web.data.dto.ProductVersion v = new step.learning.java231web.data.dto.ProductVersion();
+                    v.setId("v-1");
+                    v.setProductId("p-1");
+                    v.setPrice(1000);
+                    v.setStock(10);
+                    vList.add(v);
+                }
+                return vList;
+            }
+        };
+
+        servlet = new ProductSectionServlet(fakeDao, fakeVersionDao, gson);
     }
 
     private HttpServletRequest createMockRequest(String pathInfo, Map<String, String> params) {

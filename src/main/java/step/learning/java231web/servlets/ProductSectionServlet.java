@@ -10,11 +10,14 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import java.sql.SQLException;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import step.learning.java231web.data.dao.ProductSectionDao;
+import step.learning.java231web.data.dao.ProductVersionDao;
 import step.learning.java231web.data.dto.Product;
 import step.learning.java231web.data.dto.ProductSection;
+import step.learning.java231web.data.dto.ProductVersion;
 import step.learning.java231web.rest.RestPagination;
 import step.learning.java231web.rest.RestResponse;
 import step.learning.java231web.rest.RestStatus;
@@ -22,17 +25,28 @@ import step.learning.java231web.rest.RestStatus;
 @Singleton
 public class ProductSectionServlet extends HttpServlet {
     private final ProductSectionDao productSectionDao;
+    private final ProductVersionDao productVersionDao;
     private final Gson gson;
 
     @Inject
-    public ProductSectionServlet(ProductSectionDao productSectionDao) {
+    public ProductSectionServlet(ProductSectionDao productSectionDao, ProductVersionDao productVersionDao) {
         this.productSectionDao = productSectionDao;
+        this.productVersionDao = productVersionDao;
         this.gson = new GsonBuilder().serializeNulls().create();
     }
 
-    public ProductSectionServlet(ProductSectionDao productSectionDao, Gson gson) {
+    public ProductSectionServlet(ProductSectionDao productSectionDao, ProductVersionDao productVersionDao, Gson gson) {
         this.productSectionDao = productSectionDao;
+        this.productVersionDao = productVersionDao;
         this.gson = gson != null ? gson : new GsonBuilder().serializeNulls().create();
+    }
+
+    public ProductSectionServlet(ProductSectionDao productSectionDao, Gson gson) {
+        this(productSectionDao, null, gson);
+    }
+
+    public ProductSectionServlet(ProductSectionDao productSectionDao) {
+        this(productSectionDao, null, null);
     }
 
     @Override
@@ -41,6 +55,9 @@ public class ProductSectionServlet extends HttpServlet {
 
         if (productSectionDao != null) {
             productSectionDao.ensureInstalled();
+        }
+        if (productVersionDao != null) {
+            productVersionDao.ensureInstalled();
         }
 
         String pathInfo = req.getPathInfo();
@@ -113,6 +130,13 @@ public class ProductSectionServlet extends HttpServlet {
                     return;
                 }
 
+                if (productVersionDao != null && section.getProducts() != null) {
+                    for (Product p : section.getProducts()) {
+                        List<ProductVersion> versions = productVersionDao.getVersionsByProductId(p.getId());
+                        p.setVersions(versions != null ? versions : new ArrayList<>());
+                    }
+                }
+
                 long totalProducts = productSectionDao.getProductsCountBySectionSlug(slug);
                 pagination.setTotal((int) totalProducts);
                 sendRest(req, resp, HttpServletResponse.SC_OK, RestStatus.Ok, section, pagination, "object");
@@ -163,7 +187,6 @@ public class ProductSectionServlet extends HttpServlet {
 
     private void normalizeSection(ProductSection section, String baseUrl) {
         if (section == null) return;
-        section.setImageUrl(fixImageUrl(section.getImageUrl(), baseUrl));
         if (section.getProducts() != null) {
             for (Product p : section.getProducts()) {
                 p.setImageUrl(fixImageUrl(p.getImageUrl(), baseUrl));

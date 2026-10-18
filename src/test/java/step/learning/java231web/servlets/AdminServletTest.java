@@ -97,6 +97,53 @@ public class AdminServletTest {
     }
 
     @Test
+    public void testAdminProductVersionDoPostValidationErrors() throws Exception {
+        Map<String, String> invalidFields = new HashMap<>();
+        invalidFields.put("product-id", ""); // missing product id
+        invalidFields.put("product-title", "X"); // too short
+        invalidFields.put("product-description", ""); // empty description
+        invalidFields.put("product-slug", "INVALID SLUG!");
+        invalidFields.put("product-price", "-10"); // negative price
+        invalidFields.put("product-stock", "-5"); // negative stock
+        invalidFields.put("product-order", "-1"); // negative order
+
+        step.learning.java231web.services.form.FormParseResult formResult = new step.learning.java231web.services.form.FormParseResult() {
+            @Override
+            public Map<String, String> getFields() {
+                return invalidFields;
+            }
+
+            @Override
+            public Map<String, org.apache.commons.fileupload2.core.FileItem> getFiles() {
+                return java.util.Collections.emptyMap();
+            }
+        };
+
+        step.learning.java231web.services.form.IFormParseService mockFormService = req -> formResult;
+        AdminServlet servletWithMock = new AdminServlet(null, mockFormService, null, null, null, null);
+
+        TestContext ctx = new TestContext();
+        HttpServletRequest request = createMockRequest("/product-version", ctx);
+        HttpServletResponse response = createMockResponse(ctx);
+
+        servletWithMock.doPost(request, response);
+
+        assertNotNull(ctx.attributes.get("validationErrors"));
+        @SuppressWarnings("unchecked")
+        Map<String, String> errors = (Map<String, String>) ctx.attributes.get("validationErrors");
+        assertTrue(errors.containsKey("product-id"));
+        assertTrue(errors.containsKey("product-title"));
+        assertTrue(errors.containsKey("product-description"));
+        assertTrue(errors.containsKey("product-slug"));
+        assertTrue(errors.containsKey("product-price"));
+        assertTrue(errors.containsKey("product-stock"));
+        assertTrue(errors.containsKey("product-order"));
+        assertEquals("version", ctx.attributes.get("formType"));
+        assertNotNull(ctx.attributes.get("formError"));
+        assertEquals("product", ctx.attributes.get("adminPage"));
+    }
+
+    @Test
     public void testAdminSectionRoute() throws Exception {
         TestContext ctx = new TestContext();
         HttpServletRequest request = createMockRequest("/section", ctx);

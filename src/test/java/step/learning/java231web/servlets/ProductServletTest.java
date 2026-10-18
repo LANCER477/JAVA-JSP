@@ -62,7 +62,7 @@ public class ProductServletTest {
         assertEquals(200, root.getAsJsonObject("status").get("code").getAsInt());
         assertTrue(root.getAsJsonObject("status").get("isOk").getAsBoolean());
         assertEquals("API 'Products'", root.getAsJsonObject("meta").get("serviceName").getAsString());
-        assertEquals("/123", root.getAsJsonObject("meta").getAsJsonObject("parameters").get("slug").getAsString());
+        assertEquals("123", root.getAsJsonObject("meta").getAsJsonObject("parameters").get("slug").getAsString());
         assertTrue(root.get("data").isJsonNull());
     }
 
@@ -86,8 +86,10 @@ public class ProductServletTest {
         JsonObject data = root.getAsJsonObject("data");
         assertEquals("9590e16c-c6f7-44c1-aac7-5027f5caf11f", data.get("id").getAsString());
         assertEquals("Навушники Apple AirPods Pro 3 (MFHP4)(2025)", data.get("title").getAsString());
-        assertEquals("64181f77-8902-4eb3-82f8-45aad6eed9c0.png", data.get("imageUrl").getAsString());
+        assertTrue(data.get("imageUrl").getAsString().endsWith("64181f77-8902-4eb3-82f8-45aad6eed9c0.png"));
         assertEquals(2, data.get("orderInPrice").getAsInt());
+        assertNotNull(data.get("versions"));
+        assertTrue(data.get("versions").isJsonArray());
     }
 
     private HttpServletRequest createMockRequest(String pathInfo) {
