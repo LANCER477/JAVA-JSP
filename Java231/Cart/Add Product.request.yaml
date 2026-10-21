@@ -1,0 +1,6 @@
+$kind: http-request
+url: "{{host}}/cart?pvid=f1e287b9-3902-49c7-921c-05df55825276"
+method: POST
+queryParams:
+  pvid: f1e287b9-3902-49c7-921c-05df55825276
+order: 2000

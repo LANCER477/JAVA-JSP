@@ -1,14 +1,18 @@
 step\learning\java231web\rest\RestStatusTest.class
+step\learning\java231web\dao\CartDaoTest.class
 step\learning\java231web\servlets\AdminServletTest$TestContext.class
 step\learning\java231web\servlets\StorageServletTest$1.class
 step\learning\java231web\servlets\ProductSectionServletTest$2.class
 step\learning\java231web\models\SectionFormModelTest.class
+step\learning\java231web\servlets\CartServletTest$2.class
 step\learning\java231web\servlets\ProductSectionServletTest.class
 step\learning\java231web\services\storage\DiskStorageServiceTest.class
 step\learning\java231web\servlets\UserServletTest$MockUserDao.class
 step\learning\java231web\servlets\AdminServletTest$1.class
 step\learning\java231web\servlets\ProductServletTest.class
+step\learning\java231web\servlets\CartServletTest.class
 step\learning\java231web\servlets\UserServletTest$TestResponseContext.class
+step\learning\java231web\servlets\CartServletTest$1.class
 step\learning\java231web\services\time\TimeServiceTest.class
 step\learning\java231web\servlets\StorageServletTest$2.class
 step\learning\java231web\models\ProductVersionFormModelTest$1.class
@@ -17,6 +21,7 @@ step\learning\java231web\servlets\AdminServletTest$3.class
 step\learning\java231web\servlets\StorageServletTest.class
 step\learning\java231web\servlets\ProductServletTest$1.class
 step\learning\java231web\models\ProductFormModelTest.class
+step\learning\java231web\servlets\CartServletTest$3.class
 step\learning\java231web\dao\ProductSectionDaoTest.class
 step\learning\java231web\servlets\StorageServletTest$3.class
 step\learning\java231web\servlets\ProductSectionServletTest$ResponseContext.class

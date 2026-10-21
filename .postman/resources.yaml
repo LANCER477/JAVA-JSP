@@ -1,0 +1,13 @@
+# Use this workspace to collaborate
+workspace:
+  id: fc16ff66-befc-4ed0-8e9d-a9b7205c0f1b
+
+localResources:
+  collections:
+    - ../Java231
+
+# Each entry here maps a local resource to one or more corresponding objects in Postman Cloud
+
+cloudResources:
+  collections:
+    ../Java231: 7b771a5b-cart-231-collection-id

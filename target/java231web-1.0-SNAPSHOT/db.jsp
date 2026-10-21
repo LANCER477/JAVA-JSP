@@ -3,6 +3,10 @@
 <%
     String connectionStatus = (String) request.getAttribute("connectionStatus");
     String ddlResult = (String) request.getAttribute("ddlResult");
+    String productSectionResult = (String) request.getAttribute("productSectionResult");
+    String productResult = (String) request.getAttribute("productResult");
+    String productVersionResult = (String) request.getAttribute("productVersionResult");
+    String cartDaoResult = (String) request.getAttribute("cartDaoResult");
     List<String> dmlRows = (List<String>) request.getAttribute("dmlRows");
     String param = (String) request.getAttribute("param");
     String paramResult = (String) request.getAttribute("paramResult");
@@ -20,9 +24,13 @@
         <li>Виконання запитів. Розрізняються запити з результатами та без них, а також параметричні (підготовлені) запити.</li>
     </ul>
 
-    <% if (ddlResult != null) { %>
-        <p><b>DLL:</b> <%= ddlResult %></p>
-    <% } %>
+    <p style="line-height: 1.6; margin: 12px 0;">
+        <% if (ddlResult != null) { %>DLL: <%= ddlResult %><br/><% } %>
+        <% if (productSectionResult != null) { %>productSection: <%= productSectionResult %><br/><% } %>
+        <% if (productResult != null) { %>product: <%= productResult %><br/><% } %>
+        <% if (productVersionResult != null) { %>productVersion: <%= productVersionResult %><br/><% } %>
+        <% if (cartDaoResult != null) { %>cartDao: <%= cartDaoResult %><% } %>
+    </p>
 
     <% if (dmlRows != null && !dmlRows.isEmpty()) { %>
         <p><b>DML</b> 
@@ -38,11 +46,13 @@
         <button type="submit" style="padding: 6px 14px; cursor: pointer;">Hello</button>
     </form>
     <p><code><%= paramResult %></code></p>
+
+    <p style="margin-top: 14px;">Random UUID: <%= uuid != null ? uuid : "" %></p>
 </div>
 
 <div class="card timestamp-card" style="margin-top: 16px;">
-    <h3>База даних (MySQL) - Формування UUID (Д.З.)</h3>
-    <p>SQL-запит для формування UUID:</p>
+    <h3>Робота з БД (MySQL) - генерування UUID (с.р.)</h3>
+    <p>SQL-запит для генерування UUID:</p>
     <p><code><%= sqlQuery != null ? sqlQuery : "SELECT UUID();" %></code></p>
 
     <% if (Boolean.TRUE.equals(dbSuccess)) { %>
@@ -71,6 +81,6 @@
         <li>База даних: <code>java_231</code></li>
         <li>Користувач: <code>user_231j</code></li>
         <li>SQL запит: <code>SELECT UUID();</code></li>
-        <li>Контроль проходження сервлету: <b><%= request.getAttribute("servlet") %></b></li>
+        <li>Контролер вихідного сервлету: <b><%= request.getAttribute("servlet") %></b></li>
     </ul>
 </div>

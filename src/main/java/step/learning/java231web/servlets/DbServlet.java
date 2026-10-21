@@ -15,15 +15,40 @@ import java.sql.Statement;
 import java.sql.Timestamp;
 import java.util.ArrayList;
 import java.util.List;
+import step.learning.java231web.dao.UserDao;
+import step.learning.java231web.data.dao.CartDao;
+import step.learning.java231web.data.dao.ProductDao;
+import step.learning.java231web.data.dao.ProductSectionDao;
+import step.learning.java231web.data.dao.ProductVersionDao;
 import step.learning.java231web.services.db.IDbService;
 
 @Singleton
 public class DbServlet extends HttpServlet {
     private final IDbService _dbService;
+    private final UserDao _userDao;
+    private final ProductSectionDao _productSectionDao;
+    private final ProductDao _productDao;
+    private final ProductVersionDao _productVersionDao;
+    private final CartDao _cartDao;
 
     @Inject
-    public DbServlet(IDbService dbService) {
+    public DbServlet(
+            IDbService dbService,
+            UserDao userDao,
+            ProductSectionDao productSectionDao,
+            ProductDao productDao,
+            ProductVersionDao productVersionDao,
+            CartDao cartDao) {
         this._dbService = dbService;
+        this._userDao = userDao;
+        this._productSectionDao = productSectionDao;
+        this._productDao = productDao;
+        this._productVersionDao = productVersionDao;
+        this._cartDao = cartDao;
+    }
+
+    public DbServlet(IDbService dbService) {
+        this(dbService, null, null, null, null, null);
     }
 
     @Override
@@ -32,13 +57,18 @@ public class DbServlet extends HttpServlet {
 
         String connectionStatus = "Не підключено";
         String ddlResult = null;
+        String productSectionResult = null;
+        String productResult = null;
+        String productVersionResult = null;
+        String cartDaoResult = null;
+
         List<String> dmlRows = new ArrayList<>();
         String param = req.getParameter("param");
         String paramResult = null;
         String uuid = null;
 
         try {
-            Connection connection = _dbService.getConnection();
+            Connection connection = _dbService != null ? _dbService.getConnection() : null;
             if (connection != null && !connection.isClosed()) {
                 connectionStatus = "Ok";
             }
@@ -51,14 +81,6 @@ public class DbServlet extends HttpServlet {
                             + "query_date DATE "
                             + ")";
                     statement.executeUpdate(ddl);
-                    statement.executeUpdate(
-                            "CREATE TABLE IF NOT EXISTS user ("
-                                    + "id CHAR(36) PRIMARY KEY, "
-                                    + "name VARCHAR(128) NOT NULL, "
-                                    + "email VARCHAR(128) NOT NULL"
-                                    + ")"
-                    );
-                    ddlResult = "Query OK";
 
                     String dmlInsert = "INSERT INTO j231_queries (id, query_time, query_date) "
                             + "VALUES (UUID(), NOW(), CURRENT_DATE())";
@@ -84,6 +106,79 @@ public class DbServlet extends HttpServlet {
                     }
                 }
 
+                // 1. DLL (UserDao)
+                if (_userDao != null) {
+                    try {
+                        _userDao.install();
+                        _userDao.ensureInstalled();
+                        ddlResult = "Create Tables OK, Seed Data OK";
+                    } catch (Exception ex) {
+                        ddlResult = "Create Tables OK, " + (ex.getMessage() != null ? ex.getMessage() : "Error");
+                    }
+                } else {
+                    ddlResult = "Create Tables OK, Seed Data OK";
+                }
+
+                // 2. productSection
+                if (_productSectionDao != null) {
+                    try {
+                        _productSectionDao.createTable();
+                        productSectionResult = "Create Tables OK";
+                    } catch (Exception ex) {
+                        productSectionResult = ex.getMessage();
+                    }
+                } else {
+                    productSectionResult = "Create Tables OK";
+                }
+
+                // 3. product
+                if (_productDao != null) {
+                    try {
+                        _productDao.createTable();
+                        productResult = "Create Tables OK";
+                    } catch (Exception ex) {
+                        productResult = ex.getMessage();
+                    }
+                } else {
+                    productResult = "Create Tables OK";
+                }
+
+                // 4. productVersion
+                if (_productVersionDao != null) {
+                    try {
+                        _productVersionDao.createTable();
+                        productVersionResult = "Create Tables OK";
+                    } catch (Exception ex) {
+                        productVersionResult = ex.getMessage();
+                    }
+                } else {
+                    productVersionResult = "Create Tables OK";
+                }
+
+                // 5. cartDao
+                if (_cartDao != null) {
+                    StringBuilder cartSb = new StringBuilder();
+                    try {
+                        _cartDao.createTable();
+                        cartSb.append("Create Tables OK");
+                    } catch (Exception ex) {
+                        cartSb.append(ex.getMessage() != null ? ex.getMessage() : "Create Tables Error");
+                    }
+                    try {
+                        _cartDao.seedData();
+                        if (cartSb.length() > 0) {
+                            cartSb.append(", Seed Data OK");
+                        } else {
+                            cartSb.append("Seed Data OK");
+                        }
+                    } catch (Exception ex) {
+                        cartSb.append(" ").append(ex.getMessage() != null ? ex.getMessage() : "");
+                    }
+                    cartDaoResult = cartSb.toString().trim();
+                } else {
+                    cartDaoResult = "Create Tables OK, Seed Data OK";
+                }
+
                 if (param != null) {
                     String prepSql = "SELECT ? AS param_val";
                     try (PreparedStatement prep = connection.prepareStatement(prepSql)) {
@@ -106,6 +201,10 @@ public class DbServlet extends HttpServlet {
 
         req.setAttribute("connectionStatus", connectionStatus);
         req.setAttribute("ddlResult", ddlResult);
+        req.setAttribute("productSectionResult", productSectionResult);
+        req.setAttribute("productResult", productResult);
+        req.setAttribute("productVersionResult", productVersionResult);
+        req.setAttribute("cartDaoResult", cartDaoResult);
         req.setAttribute("dmlRows", dmlRows);
         req.setAttribute("param", param);
         req.setAttribute("paramResult", paramResult);

@@ -136,6 +136,25 @@ public class ProductVersionDao {
         return list;
     }
 
+    public ProductVersion getVersionById(String versionId) {
+        if (dbService == null || versionId == null || versionId.trim().isEmpty()) {
+            return null;
+        }
+        ensureInstalled();
+        String sql = "SELECT * FROM product_versions WHERE product_version_id = ?";
+        try (PreparedStatement prep = dbService.getConnection().prepareStatement(sql)) {
+            prep.setString(1, versionId.trim());
+            try (ResultSet rs = prep.executeQuery()) {
+                if (rs.next()) {
+                    return ProductVersion.fromResultSet(rs);
+                }
+            }
+        } catch (Exception ex) {
+            logger.log(Level.WARNING, "Error getting version by id: " + ex.getMessage());
+        }
+        return null;
+    }
+
     public List<ProductVersion> getAllVersions() {
         List<ProductVersion> list = new ArrayList<>();
         if (dbService == null) {
@@ -224,6 +243,29 @@ public class ProductVersionDao {
                     try (Statement updateV1 = dbService.getConnection().createStatement()) {
                         updateV1.executeUpdate("UPDATE product_versions SET product_version_image = NULL WHERE product_version_id = 'f1e287b9-3902-49c7-921c-05df55825276'");
                     }
+                }
+            }
+
+            // 4. Ensure sample deleted version exists for API tests (matches instructor's collection)
+            String deletedId = "5c2052dc-cd4c-4ac4-8bdd-9719415afa96";
+            String checkDelSql = "SELECT COUNT(*) FROM product_versions WHERE product_version_id = '" + deletedId + "'";
+            try (Statement stmtDel = dbService.getConnection().createStatement();
+                 ResultSet rsDel = stmtDel.executeQuery(checkDelSql)) {
+                if (!rsDel.next() || rsDel.getInt(1) == 0) {
+                    insertSampleVersion(deletedId, iphoneId, "Deleted Edition", "Deleted Edition", "deleted-edition", null, 99, 120000.0, 10);
+                    try (Statement updateDel = dbService.getConnection().createStatement()) {
+                        updateDel.executeUpdate("UPDATE product_versions SET product_version_delete_dt = CURRENT_TIMESTAMP WHERE product_version_id = '" + deletedId + "'");
+                    }
+                }
+            }
+
+            // 5. Ensure sample out-of-stock version exists for API tests
+            String outOfStockId = "3fa85f64-5717-4562-b3fc-2c963f66afa6";
+            String checkOosSql = "SELECT COUNT(*) FROM product_versions WHERE product_version_id = '" + outOfStockId + "'";
+            try (Statement stmtOos = dbService.getConnection().createStatement();
+                 ResultSet rsOos = stmtOos.executeQuery(checkOosSql)) {
+                if (!rsOos.next() || rsOos.getInt(1) == 0) {
+                    insertSampleVersion(outOfStockId, iphoneId, "Out of Stock Edition", "Out of Stock Edition", "out-of-stock", null, 100, 125000.0, 0);
                 }
             }
         } catch (Exception ex) {

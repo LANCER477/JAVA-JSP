@@ -1,3 +1,4 @@
+C:\Users\maksi\Downloads\java231web-master\src\test\java\step\learning\java231web\dao\CartDaoTest.java
 C:\Users\maksi\Downloads\java231web-master\src\test\java\step\learning\java231web\dao\ProductSectionDaoTest.java
 C:\Users\maksi\Downloads\java231web-master\src\test\java\step\learning\java231web\models\ProductFormModelTest.java
 C:\Users\maksi\Downloads\java231web-master\src\test\java\step\learning\java231web\models\ProductVersionFormModelTest.java
@@ -7,6 +8,7 @@ C:\Users\maksi\Downloads\java231web-master\src\test\java\step\learning\java231we
 C:\Users\maksi\Downloads\java231web-master\src\test\java\step\learning\java231web\services\storage\DiskStorageServiceTest.java
 C:\Users\maksi\Downloads\java231web-master\src\test\java\step\learning\java231web\services\time\TimeServiceTest.java
 C:\Users\maksi\Downloads\java231web-master\src\test\java\step\learning\java231web\servlets\AdminServletTest.java
+C:\Users\maksi\Downloads\java231web-master\src\test\java\step\learning\java231web\servlets\CartServletTest.java
 C:\Users\maksi\Downloads\java231web-master\src\test\java\step\learning\java231web\servlets\ProductSectionServletTest.java
 C:\Users\maksi\Downloads\java231web-master\src\test\java\step\learning\java231web\servlets\ProductServletTest.java
 C:\Users\maksi\Downloads\java231web-master\src\test\java\step\learning\java231web\servlets\StorageServletTest.java

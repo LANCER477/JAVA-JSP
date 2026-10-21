@@ -20,6 +20,7 @@ import step.learning.java231web.services.db.IDbService;
 public class ProductDao {
     private final IDbService dbService;
     private final Logger logger;
+    private boolean isInstalled = false;
 
     @Inject
     public ProductDao(IDbService dbService) {
@@ -30,6 +31,42 @@ public class ProductDao {
     public ProductDao(IDbService dbService, Logger logger) {
         this.dbService = dbService;
         this.logger = logger != null ? logger : Logger.getLogger(ProductDao.class.getName());
+    }
+
+    public synchronized void ensureInstalled() {
+        if (isInstalled || dbService == null) {
+            return;
+        }
+        try {
+            createTable();
+            isInstalled = true;
+        } catch (Exception ex) {
+            logger.log(Level.WARNING, "Auto install error for products", ex);
+        }
+    }
+
+    public void createTable() throws SQLException {
+        if (dbService == null) {
+            return;
+        }
+        String sql = "CREATE TABLE IF NOT EXISTS products ("
+                + "product_id CHAR(36) PRIMARY KEY, "
+                + "product_section_id CHAR(36) NOT NULL, "
+                + "product_title VARCHAR(256) NOT NULL, "
+                + "product_description TEXT NULL, "
+                + "product_slug VARCHAR(256) NOT NULL, "
+                + "product_price DECIMAL(10, 2) NOT NULL DEFAULT 0, "
+                + "product_stock INT NOT NULL DEFAULT 0, "
+                + "product_order INT NOT NULL DEFAULT 10000, "
+                + "product_image VARCHAR(256) NULL, "
+                + "product_delete_dt DATETIME NULL"
+                + ") ENGINE=InnoDB DEFAULT CHARSET=utf8mb4";
+        try (Statement stmt = dbService.getConnection().createStatement()) {
+            stmt.executeUpdate(sql);
+        } catch (SQLException ex) {
+            logger.log(Level.WARNING, "Error creating products table", ex);
+            throw ex;
+        }
     }
 
     public boolean addProduct(Product product) throws SQLException {

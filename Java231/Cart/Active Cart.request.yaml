@@ -1,0 +1,6 @@
+$kind: http-request
+url: "{{host}}/cart"
+method: GET
+headers:
+  Authorization: Bearer 8fe49911-37f0-4666-9b04-f58c751e1272
+order: 1000

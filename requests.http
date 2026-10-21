@@ -1,0 +1,20 @@
+### 1. Отримати Cart з Bearer токеном (видає токен як на скріншоті)
+GET http://localhost:8080/java231web/cart
+Authorization: Bearer 024ad494-bafd-11f1-9d1a-84ba59d7b864
+Accept: application/json
+
+### 2. Отримати Cart без токена (видає null)
+GET http://localhost:8080/java231web/cart
+Accept: application/json
+
+### 3. Для контексту викладача (якщо назва проекту у Tomcat змінена на JavaWebSuperProject)
+GET http://localhost:8080/JavaWebSuperProject/cart
+Authorization: Bearer 024ad494-bafd-11f1-9d1a-84ba59d7b864
+Accept: application/json
+
+### 4. Перевірка БД
+GET http://localhost:8080/java231web/db
+
+### 5. Товари (Product)
+GET http://localhost:8080/java231web/product
+Accept: application/json

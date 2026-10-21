@@ -1,0 +1,6 @@
+$kind: http-request
+url: "{{host}}/cart?pvid=wrong-id"
+method: POST
+queryParams:
+  pvid: wrong-id
+order: 4000

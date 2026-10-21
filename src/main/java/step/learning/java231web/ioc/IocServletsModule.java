@@ -5,17 +5,13 @@ import step.learning.java231web.filters.*;
 import step.learning.java231web.servlets.*;
 
 /**
- * Модуль конфігурації сервлетів (і фільтрів) інжектора
+ * Модуль конфігурації сервлетів (та фільтрів) проекту
  * @author Lector
  */
 public class IocServletsModule extends ServletModule {
 
     @Override
     protected void configureServlets() {
-        // З переходом на ІоС необхідно зняти всі @Web-анотації
-        // з фільтрів та сервлетів, а також прибрати їх з web.xml
-        // До фільтрів та сервлетів НЕОБХІДНО додати анотацію
-        // @Singleton
         filter("/*").through( EncodingFilter.class );
         filter("/*").through( CorsFilter.class     );
         filter("/*").through( AuthFilter.class     );
@@ -30,6 +26,7 @@ public class IocServletsModule extends ServletModule {
         serve("/section", "/section/*").with( ProductSectionServlet.class );
         serve("/product", "/product/*").with( ProductServlet.class );
         serve("/storage", "/storage/*").with( StorageServlet.class );
+        serve("/cart", "/cart/*").with( CartServlet.class );
     }
 
 }

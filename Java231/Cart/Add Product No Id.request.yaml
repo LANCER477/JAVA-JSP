@@ -1,0 +1,8 @@
+$kind: http-request
+url: "{{host}}/cart"
+method: POST
+queryParams:
+  - key: pvid
+    value: 4656c3e9-ac7b-43ec-b00c-214d6789abcd
+    disabled: true
+order: 3000
