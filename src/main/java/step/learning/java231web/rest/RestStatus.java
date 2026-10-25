@@ -21,6 +21,8 @@ public class RestStatus {
     public static final RestStatus Accepted = new RestStatus(true, 202, "Accepted");
     public static final RestStatus NoContent = new RestStatus(true, 204, "No Content");
 
+    public static final RestStatus AlreadyReported  = new RestStatus(true,  208, "Already Reported");
+
     public static final RestStatus BadRequest = new RestStatus(false, 400, "Bad Request");
     public static final RestStatus Unauthorized = new RestStatus(false, 401, "Unauthorized");
     public static final RestStatus PaymentRequired = new RestStatus(false, 402, "Payment Required");
@@ -33,6 +35,7 @@ public class RestStatus {
     public static final RestStatus Gone = new RestStatus(false, 410, "Gone");
     public static final RestStatus PayloadTooLarge = new RestStatus(false, 413, "Payload Too Large");
     public static final RestStatus UnsupportedMediaType = new RestStatus(false, 415, "Unsupported Media Type");
+    public static final RestStatus Unprocessable = new RestStatus(false, 422, "Unprocessable Content");
     public static final RestStatus UnprocessableEntity = new RestStatus(false, 422, "Unprocessable Entity");
     public static final RestStatus TooManyRequests = new RestStatus(false, 429, "Too Many Requests");
 
@@ -45,6 +48,7 @@ public class RestStatus {
     // ----- NON STANDARD --------
     public static final RestStatus HeaderRequired = new RestStatus(false, 440, "Header Required");
     public static final RestStatus HeaderMalformed = new RestStatus(false, 441, "Header Malformed");
+    public static final RestStatus QueryParamMissed = new RestStatus(false, 442, "Missing Required Query Parameter ");
     public static final RestStatus QueryParameterRequired = new RestStatus(false, 442, "Query Parameter Required");
     public static final RestStatus QueryParameterMalformed = new RestStatus(false, 443, "Query Parameter Malformed");
     public static final RestStatus TokenRequired = new RestStatus(false, 444, "Token Required");

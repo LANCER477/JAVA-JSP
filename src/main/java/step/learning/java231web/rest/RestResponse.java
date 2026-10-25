@@ -21,6 +21,36 @@ public class RestResponse {
         this.meta = new RestMeta();
     }
 
+    public RestResponse(RestStatus status, RestMeta meta, Object data) {
+        this.status = status;
+        this.meta = meta;
+        this.data = data;
+    }
+
+    public static RestResponse Ok(RestMeta meta, Object data) {
+        return new RestResponse(RestStatus.Ok, meta, data);
+    }
+
+    public static RestResponse NotFound(RestMeta meta, Object data) {
+        return new RestResponse(RestStatus.NotFound, meta, data);
+    }
+
+    public static RestResponse ErrorInternal(RestMeta meta, Object data) {
+        return new RestResponse(RestStatus.InternalServerError, meta, data);
+    }
+
+    public static RestResponse AlreadyReported(RestMeta meta, Object data) {
+        return new RestResponse(RestStatus.AlreadyReported, meta, data);
+    }
+
+    public static RestResponse Unprocessable(RestMeta meta, Object data) {
+        return new RestResponse(RestStatus.Unprocessable, meta, data);
+    }
+
+    public static RestResponse QueryParamMissed(RestMeta meta, Object data) {
+        return new RestResponse(RestStatus.QueryParamMissed, meta, data);
+    }
+
     public RestStatus getStatus() {
         return status;
     }

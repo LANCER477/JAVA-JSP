@@ -31,6 +31,8 @@ public class AuthFilter implements Filter {
         String authHeader = req.getHeader("Authorization");
 
         UserToken userToken = null;
+
+        // 1. Check Bearer token in Authorization header
         if (authHeader != null && authHeader.toLowerCase().startsWith("bearer ")) {
             String tokenId = authHeader.substring(7).trim();
             if (tokenDao != null) {
@@ -43,8 +45,31 @@ public class AuthFilter implements Filter {
                         TokenDao.DEMO_LOGIN,
                         TokenDao.DEMO_SALT,
                         TokenDao.DEMO_DK,
-                        TokenDao.DEMO_ROLE
+                        TokenDao.DEMO_ROLE,
+                        TokenDao.DEMO_NAME
                 );
+            }
+        }
+
+        // 2. Check query parameter 'ua' (User Authorization token, e.g. /?ua=6aa5bcec-8f16-4d15-95ba-b67b9d63bdff)
+        if (userToken == null) {
+            String ua = req.getParameter("ua");
+            if (ua != null && !ua.trim().isEmpty()) {
+                String tokenId = ua.trim();
+                if (tokenDao != null) {
+                    userToken = tokenDao.getToken(tokenId);
+                }
+                if (userToken == null && (TokenDao.HW_TOKEN_ID.equalsIgnoreCase(tokenId) || TokenDao.DEMO_TOKEN_ID.equalsIgnoreCase(tokenId))) {
+                    userToken = new UserToken(
+                            tokenId,
+                            TokenDao.DEMO_USER_ID,
+                            TokenDao.DEMO_LOGIN,
+                            TokenDao.DEMO_SALT,
+                            TokenDao.DEMO_DK,
+                            TokenDao.DEMO_ROLE,
+                            TokenDao.DEMO_NAME
+                    );
+                }
             }
         }
 

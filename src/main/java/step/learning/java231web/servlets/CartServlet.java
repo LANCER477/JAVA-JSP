@@ -2,24 +2,26 @@ package step.learning.java231web.servlets;
 
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
+import com.google.gson.JsonObject;
+import com.google.gson.JsonParser;
 import com.google.inject.Inject;
 import com.google.inject.Singleton;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServlet;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import java.io.BufferedReader;
 import java.io.IOException;
+import java.sql.SQLException;
 import java.util.Arrays;
 import java.util.Collections;
-import java.util.LinkedHashMap;
-import java.util.Map;
 import step.learning.java231web.data.dao.CartDao;
 import step.learning.java231web.data.dao.ProductVersionDao;
 import step.learning.java231web.data.dao.TokenDao;
 import step.learning.java231web.data.dto.Cart;
-import step.learning.java231web.data.dto.CartItem;
 import step.learning.java231web.data.dto.ProductVersion;
 import step.learning.java231web.data.dto.UserToken;
+import step.learning.java231web.rest.RestMeta;
 import step.learning.java231web.rest.RestResponse;
 import step.learning.java231web.rest.RestStatus;
 
@@ -30,26 +32,11 @@ public class CartServlet extends HttpServlet {
     private final ProductVersionDao productVersionDao;
     private final Gson gson;
     private final Gson restGson;
+    private final RestMeta meta;
 
     @Inject
     public CartServlet(CartDao cartDao, TokenDao tokenDao, ProductVersionDao productVersionDao) {
-        this.cartDao = cartDao;
-        this.tokenDao = tokenDao;
-        this.productVersionDao = productVersionDao;
-        this.gson = new GsonBuilder().serializeNulls().create();
-        this.restGson = this.gson;
-    }
-
-    public CartServlet(CartDao cartDao, TokenDao tokenDao, ProductVersionDao productVersionDao, Gson gson) {
-        this.cartDao = cartDao;
-        this.tokenDao = tokenDao;
-        this.productVersionDao = productVersionDao;
-        this.gson = gson != null ? gson : new GsonBuilder().serializeNulls().create();
-        this.restGson = this.gson;
-    }
-
-    public CartServlet(CartDao cartDao, TokenDao tokenDao) {
-        this(cartDao, tokenDao, null, null);
+        this(cartDao, tokenDao, productVersionDao, null);
     }
 
     public CartServlet(CartDao cartDao) {
@@ -60,8 +47,22 @@ public class CartServlet extends HttpServlet {
         this(cartDao, null, null, gson);
     }
 
+    public CartServlet(CartDao cartDao, TokenDao tokenDao) {
+        this(cartDao, tokenDao, null, null);
+    }
+
     public CartServlet(CartDao cartDao, TokenDao tokenDao, Gson gson) {
         this(cartDao, tokenDao, null, gson);
+    }
+
+    public CartServlet(CartDao cartDao, TokenDao tokenDao, ProductVersionDao productVersionDao, Gson gson) {
+        this.cartDao = cartDao;
+        this.tokenDao = tokenDao;
+        this.productVersionDao = productVersionDao;
+        this.gson = gson != null ? gson : new GsonBuilder().serializeNulls().create();
+        this.restGson = new Gson();
+        this.meta = new RestMeta("API 'User carts'", "object");
+        this.meta.setManipulations(Arrays.asList("GET", "POST", "PUT", "DELETE"));
     }
 
     @Override
@@ -77,14 +78,22 @@ public class CartServlet extends HttpServlet {
 
         UserToken userToken = getUserToken(req);
 
-        // If valid user token was found -> 200 OK with UserToken JSON
         if (userToken != null) {
+            Cart cart = null;
+            if (cartDao != null) {
+                try {
+                    cart = cartDao.getUserActiveCart(userToken.getUserId());
+                    if (cart == null) {
+                        cart = cartDao.getOrCreateActiveCart(userToken.getUserId());
+                    }
+                } catch (Exception ignored) {
+                }
+            }
             resp.setStatus(HttpServletResponse.SC_OK);
-            resp.getWriter().print(gson.toJson(userToken));
+            resp.getWriter().print(gson.toJson(cart));
             return;
         }
 
-        // If token is invalid or missing -> 401 Unauthorized with RestResponse
         sendUnauthorized(resp);
     }
 
@@ -95,97 +104,113 @@ public class CartServlet extends HttpServlet {
         if (cartDao != null) {
             cartDao.ensureInstalled();
         }
+        if (tokenDao != null) {
+            tokenDao.ensureInstalled();
+        }
         if (productVersionDao != null) {
             productVersionDao.ensureInstalled();
         }
 
-        String pvid = req != null ? req.getParameter("pvid") : null;
-
-        // 1. Missing pvid
-        if (pvid == null || pvid.trim().isEmpty()) {
-            RestResponse restResponse = new RestResponse(RestStatus.Ok, "Missing required parameter 'pvid'");
-            fillCartMeta(restResponse, "string");
-            resp.setStatus(HttpServletResponse.SC_OK);
-            resp.getWriter().print(restGson.toJson(restResponse));
+        UserToken userToken = getUserToken(req);
+        if (userToken == null) {
+            sendUnauthorized(resp);
             return;
         }
+        String userId = userToken.getUserId();
 
-        UserToken userToken = getUserToken(req);
-        String userId = userToken != null ? userToken.getUserId() : null;
+        // прийом товару (версії) та додавання до кошику
+        // - якщо немає активного кошику, то створюємо новий
+        // - якщо є активний кошик, то перевіряємо чи є в ньому цей товар
+        //  = якщо є, то вживаємо статус 208 "Already Reported"
+        //  = якщо ні, то створюємо CartItem з відповідним товаром
+        RestResponse restResponse = null;
 
-        try {
-            ProductVersion pv = productVersionDao != null ? productVersionDao.getVersionById(pvid.trim()) : null;
-            if (pv == null) {
-                RestResponse notFoundResponse = new RestResponse(RestStatus.NotFound, null);
-                fillCartMeta(notFoundResponse, "null");
-                resp.setStatus(HttpServletResponse.SC_OK);
-                resp.getWriter().print(restGson.toJson(notFoundResponse));
-                return;
-            }
-
-            if (pv.getDeletedAt() != null) {
-                RestResponse deletedResponse = new RestResponse(RestStatus.Ok, "Product version deleted");
-                fillCartMeta(deletedResponse, "string");
-                resp.setStatus(HttpServletResponse.SC_OK);
-                resp.getWriter().print(restGson.toJson(deletedResponse));
-                return;
-            }
-
-            if (pv.getStock() <= 0) {
-                RestResponse outOfStockResponse = new RestResponse(RestStatus.Ok, "Product version out of stock");
-                fillCartMeta(outOfStockResponse, "string");
-                resp.setStatus(HttpServletResponse.SC_OK);
-                resp.getWriter().print(restGson.toJson(outOfStockResponse));
-                return;
-            }
-
-            Cart cart = cartDao != null ? cartDao.getOrCreateActiveCart(userId) : null;
-            CartItem item = null;
-            if (cart != null && cartDao != null) {
-                item = cartDao.addOrUpdateItem(cart.getId(), pv.getProductId(), pv.getId(), 1, pv.getPrice());
-            }
-
-            RestResponse okResponse = new RestResponse(RestStatus.Ok, item != null ? item : "Product version added to cart");
-            fillCartMeta(okResponse, item != null ? "object" : "string");
-            resp.setStatus(HttpServletResponse.SC_OK);
-            resp.getWriter().print(restGson.toJson(okResponse));
-        } catch (Exception ex) {
-            resp.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
-            RestResponse errResponse = new RestResponse(RestStatus.InternalServerError, ex.getMessage());
-            fillCartMeta(errResponse, "string");
-            resp.getWriter().print(restGson.toJson(errResponse));
+        // перевіряємо чи є в запиті параметр pvid
+        String pvid = req.getParameter("pvid");
+        if (pvid == null) {
+            pvid = extractPvidFromJson(req);
         }
-    }
 
-    private void fillCartMeta(RestResponse restResponse, String dataType) {
-        if (restResponse != null && restResponse.getMeta() != null) {
-            restResponse.getMeta().setServiceName("API 'User carts'");
-            restResponse.getMeta().setDataType(dataType);
-            restResponse.getMeta().setServerTime(System.currentTimeMillis());
-            restResponse.getMeta().setCacheTime(0);
-            restResponse.getMeta().setManipulations(Arrays.asList("GET", "POST", "DELETE", "PATCH"));
-
-            Map<String, String> links = new LinkedHashMap<>();
-            links.put("details", "/cart/{item-id}");
-            links.put("base", "/cart");
-            restResponse.getMeta().setLinks(links);
-
-            restResponse.getMeta().setParameters(null);
-            restResponse.getMeta().setPagination(null);
+        if (pvid == null) {
+            restResponse = RestResponse.QueryParamMissed(
+                    meta.setDataType("string"), 
+                    "'pvid' - product version id"
+            );
         }
+        else {
+            // перевіряємо чи є такий товар з pvid
+            ProductVersion pv = null;
+            boolean isQueryOk;
+            try {
+                pv = productVersionDao != null ? productVersionDao.getById(pvid) : null;
+                isQueryOk = true;
+            } 
+            catch (SQLException ex) {
+                restResponse = RestResponse.ErrorInternal(
+                    meta.setDataType("null"), 
+                    null
+                );
+                isQueryOk = false;
+            }
+            
+            if (isQueryOk) {                
+                if (pv == null) {
+                    restResponse = RestResponse.NotFound(
+                        meta.setDataType("null"), 
+                        null
+                    );
+                }
+                else if (pv.getDeletedAt() != null) {
+                    restResponse = RestResponse.Unprocessable(
+                        meta.setDataType("string"), 
+                        "Product version deleted"
+                    );
+                }
+                else if (pv.getStock() == 0) {
+                    restResponse = RestResponse.Unprocessable(
+                        meta.setDataType("string"), 
+                        "Product out of stock"
+                    );
+                }
+                else {
+                    String cartItemId;
+                    try {
+                        cartItemId = cartDao != null ? cartDao.addToCart(userId, pv) : null;
+                        if (cartItemId == null) {
+                            restResponse = RestResponse.AlreadyReported(
+                                    meta.setDataType("string"), 
+                                    "Product is already in cart"
+                            );
+                        }
+                        else {
+                            restResponse = RestResponse.Ok(
+                                    meta.setDataType("object"), 
+                                    cartDao.getUserActiveCart(userId)
+                            );
+                        }
+                    } 
+                    catch (SQLException ex) {
+                        restResponse = RestResponse.ErrorInternal(
+                            meta.setDataType("null"), 
+                            null
+                        );
+                    }                    
+                }
+            }
+        }
+
+        if (restResponse != null && restResponse.getStatus() != null) {
+            resp.setStatus(restResponse.getStatus().getCode());
+        }
+        resp.getWriter().print( gson.toJson( restResponse ) );
     }
 
     private UserToken getUserToken(HttpServletRequest req) {
-        if (req == null) {
-            return null;
-        }
-        // 1. Check attribute 'auth' populated by AuthFilter
+        if (req == null) return null;
         Object auth = req.getAttribute("auth");
         if (auth instanceof UserToken) {
             return (UserToken) auth;
         }
-
-        // 2. Direct check from Authorization header as fallback
         String authHeader = req.getHeader("Authorization");
         if (authHeader != null && authHeader.toLowerCase().startsWith("bearer ")) {
             String tokenId = authHeader.substring(7).trim();
@@ -206,6 +231,28 @@ public class CartServlet extends HttpServlet {
                 );
             }
         }
+        return null;
+    }
+
+    private String extractPvidFromJson(HttpServletRequest req) {
+        try {
+            StringBuilder sb = new StringBuilder();
+            BufferedReader reader = req.getReader();
+            String line;
+            while ((line = reader.readLine()) != null) {
+                sb.append(line);
+            }
+            String body = sb.toString().trim();
+            if (!body.isEmpty() && body.startsWith("{")) {
+                JsonObject obj = JsonParser.parseString(body).getAsJsonObject();
+                if (obj.has("pvid") && !obj.get("pvid").isJsonNull()) {
+                    return obj.get("pvid").getAsString();
+                }
+                if (obj.has("productVersionId") && !obj.get("productVersionId").isJsonNull()) {
+                    return obj.get("productVersionId").getAsString();
+                }
+            }
+        } catch (Exception ignored) {}
         return null;
     }
 

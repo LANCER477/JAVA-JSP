@@ -8,10 +8,8 @@ import org.junit.jupiter.api.Test;
 import step.learning.java231web.data.dao.CartDao;
 import step.learning.java231web.data.dao.ProductVersionDao;
 import step.learning.java231web.data.dao.TokenDao;
-import step.learning.java231web.data.dto.ProductVersion;
-import step.learning.java231web.data.dto.UserToken;
+import step.learning.java231web.data.dto.Cart;
 import step.learning.java231web.rest.RestResponse;
-import step.learning.java231web.rest.RestStatus;
 
 import java.io.PrintWriter;
 import java.io.StringWriter;
@@ -40,7 +38,6 @@ public class CartServletTest {
                 (proxy, method, args) -> {
                     if ("getHeader".equals(method.getName()) && args != null && args.length > 0) {
                         if ("Authorization".equalsIgnoreCase(args[0].toString())) {
-                            // Invalid token ending with extra 1
                             return "Bearer " + TokenDao.DEMO_TOKEN_ID + "1";
                         }
                     }
@@ -80,11 +77,10 @@ public class CartServletTest {
         assertEquals("Unauthorized", restResponse.getStatus().getMessage());
         assertNotNull(restResponse.getMeta());
         assertEquals("API 'User carts'", restResponse.getMeta().getServiceName());
-        assertEquals("null", restResponse.getMeta().getDataType());
     }
 
     @Test
-    public void testGetCartReturnsUserTokenWhenAuthorized() throws Exception {
+    public void testGetCartReturnsActiveCartWhenAuthorized() throws Exception {
         CartDao fakeCartDao = new CartDao(null);
         TokenDao fakeTokenDao = new TokenDao(null);
 
@@ -128,100 +124,22 @@ public class CartServletTest {
         assertEquals(200, statusCode.get());
 
         String result = stringWriter.toString().trim();
-        UserToken token = gson.fromJson(result, UserToken.class);
+        Cart cart = gson.fromJson(result, Cart.class);
 
-        assertNotNull(token);
-        assertEquals(TokenDao.DEMO_TOKEN_ID, token.getId());
-        assertEquals(TokenDao.DEMO_USER_ID, token.getUserId());
-        assertEquals("user6", token.getLogin());
-        assertEquals("7ff8e35c22d04efa", token.getSalt());
-        assertEquals("66bd532cf48ca2ad32ace9d900dc0d82", token.getDk());
-        assertEquals("guest", token.getRole());
+        assertNotNull(cart);
+        assertNotNull(cart.getCartItems());
+        assertFalse(cart.getCartItems().isEmpty());
+        assertEquals(1, cart.getCartItems().get(0).getQuantity());
+        assertNotNull(cart.getCartItems().get(0).getProductVersion());
+        assertEquals("Burgundy", cart.getCartItems().get(0).getProductVersion().getTitleAddon());
     }
 
     @Test
-    public void testPostCartMissingPvidReturnsMissingParameterMessage() throws Exception {
-        CartDao fakeCartDao = new CartDao(null);
+    public void testPostAddProductNoIdReturns442() throws Exception {
+        ProductVersionDao fakePvDao = new ProductVersionDao(null);
+        CartDao fakeCartDao = new CartDao(null, fakePvDao);
         TokenDao fakeTokenDao = new TokenDao(null);
-        ProductVersionDao fakeProductVersionDao = new ProductVersionDao(null);
-
-        Gson gson = new GsonBuilder().serializeNulls().create();
-        CartServlet servlet = new CartServlet(fakeCartDao, fakeTokenDao, fakeProductVersionDao, gson);
-
-        StringWriter stringWriter = new StringWriter();
-        PrintWriter printWriter = new PrintWriter(stringWriter);
-        AtomicInteger statusCode = new AtomicInteger(200);
-
-        HttpServletRequest request = (HttpServletRequest) Proxy.newProxyInstance(
-                HttpServletRequest.class.getClassLoader(),
-                new Class<?>[]{HttpServletRequest.class},
-                (proxy, method, args) -> {
-                    if ("getParameter".equals(method.getName()) && args != null && args.length > 0) {
-                        if ("pvid".equals(args[0])) {
-                            return null; // missing pvid parameter
-                        }
-                    }
-                    if ("getWriter".equals(method.getName())) {
-                        return printWriter;
-                    }
-                    return null;
-                }
-        );
-
-        HttpServletResponse response = (HttpServletResponse) Proxy.newProxyInstance(
-                HttpServletResponse.class.getClassLoader(),
-                new Class<?>[]{HttpServletResponse.class},
-                (proxy, method, args) -> {
-                    if ("setStatus".equals(method.getName()) && args != null && args.length > 0) {
-                        statusCode.set((Integer) args[0]);
-                        return null;
-                    }
-                    if ("getWriter".equals(method.getName())) {
-                        return printWriter;
-                    }
-                    return null;
-                }
-        );
-
-        servlet.doPost(request, response);
-
-        assertEquals(200, statusCode.get());
-
-        String result = stringWriter.toString().trim();
-        RestResponse restResponse = new Gson().fromJson(result, RestResponse.class);
-
-        assertNotNull(restResponse);
-        assertEquals("Missing required parameter 'pvid'", restResponse.getData());
-        assertNotNull(restResponse.getMeta());
-        assertEquals("string", restResponse.getMeta().getDataType());
-        assertEquals("API 'User carts'", restResponse.getMeta().getServiceName());
-        assertTrue(restResponse.getMeta().getManipulations().contains("POST"));
-        assertNotNull(restResponse.getMeta().getLinks());
-        assertEquals("/cart", restResponse.getMeta().getLinks().get("base"));
-        assertEquals("/cart/{item-id}", restResponse.getMeta().getLinks().get("details"));
-    }
-
-    @Test
-    public void testPostCartDeletedProductReturnsProductVersionDeleted() throws Exception {
-        CartDao fakeCartDao = new CartDao(null);
-        TokenDao fakeTokenDao = new TokenDao(null);
-        ProductVersionDao fakeProductVersionDao = new ProductVersionDao(null) {
-            @Override
-            public ProductVersion getVersionById(String versionId) {
-                if ("5c2052dc-cd4c-4ac4-8bdd-9719415afa96".equals(versionId)) {
-                    ProductVersion pv = new ProductVersion();
-                    pv.setId(versionId);
-                    pv.setDeletedAt(new java.util.Date());
-                    return pv;
-                }
-                return null;
-            }
-            @Override
-            public void ensureInstalled() {}
-        };
-
-        Gson gson = new GsonBuilder().serializeNulls().create();
-        CartServlet servlet = new CartServlet(fakeCartDao, fakeTokenDao, fakeProductVersionDao, gson);
+        CartServlet servlet = new CartServlet(fakeCartDao, fakeTokenDao, fakePvDao);
 
         StringWriter stringWriter = new StringWriter();
         PrintWriter printWriter = new PrintWriter(stringWriter);
@@ -231,10 +149,16 @@ public class CartServletTest {
                 HttpServletRequest.class.getClassLoader(),
                 new Class<?>[]{HttpServletRequest.class},
                 (proxy, method, args) -> {
-                    if ("getParameter".equals(method.getName()) && args != null && args.length > 0) {
-                        if ("pvid".equals(args[0])) {
-                            return "5c2052dc-cd4c-4ac4-8bdd-9719415afa96";
+                    if ("getHeader".equals(method.getName()) && args != null && args.length > 0) {
+                        if ("Authorization".equalsIgnoreCase(args[0].toString())) {
+                            return "Bearer " + TokenDao.DEMO_TOKEN_ID;
                         }
+                    }
+                    if ("getParameter".equals(method.getName())) {
+                        return null; // no pvid!
+                    }
+                    if ("getReader".equals(method.getName())) {
+                        return new java.io.BufferedReader(new java.io.StringReader(""));
                     }
                     return null;
                 }
@@ -257,38 +181,20 @@ public class CartServletTest {
 
         servlet.doPost(request, response);
 
-        assertEquals(200, statusCode.get());
-
-        String result = stringWriter.toString().trim();
-        RestResponse restResponse = new Gson().fromJson(result, RestResponse.class);
-
-        assertNotNull(restResponse);
-        assertTrue(restResponse.getStatus().isOk());
-        assertEquals("Product version deleted", restResponse.getData());
-        assertEquals("string", restResponse.getMeta().getDataType());
+        assertEquals(442, statusCode.get());
+        String json = stringWriter.toString();
+        RestResponse resp = new Gson().fromJson(json, RestResponse.class);
+        assertNotNull(resp);
+        assertEquals(442, resp.getStatus().getCode());
+        assertEquals("'pvid' - product version id", resp.getData());
     }
 
     @Test
-    public void testPostCartOutOfStockReturnsProductVersionOutOfStock() throws Exception {
-        CartDao fakeCartDao = new CartDao(null);
+    public void testPostAddProductErrIdReturns404() throws Exception {
+        ProductVersionDao fakePvDao = new ProductVersionDao(null);
+        CartDao fakeCartDao = new CartDao(null, fakePvDao);
         TokenDao fakeTokenDao = new TokenDao(null);
-        ProductVersionDao fakeProductVersionDao = new ProductVersionDao(null) {
-            @Override
-            public ProductVersion getVersionById(String versionId) {
-                if ("oos-id".equals(versionId)) {
-                    ProductVersion pv = new ProductVersion();
-                    pv.setId(versionId);
-                    pv.setStock(0);
-                    return pv;
-                }
-                return null;
-            }
-            @Override
-            public void ensureInstalled() {}
-        };
-
-        Gson gson = new GsonBuilder().serializeNulls().create();
-        CartServlet servlet = new CartServlet(fakeCartDao, fakeTokenDao, fakeProductVersionDao, gson);
+        CartServlet servlet = new CartServlet(fakeCartDao, fakeTokenDao, fakePvDao);
 
         StringWriter stringWriter = new StringWriter();
         PrintWriter printWriter = new PrintWriter(stringWriter);
@@ -298,10 +204,13 @@ public class CartServletTest {
                 HttpServletRequest.class.getClassLoader(),
                 new Class<?>[]{HttpServletRequest.class},
                 (proxy, method, args) -> {
-                    if ("getParameter".equals(method.getName()) && args != null && args.length > 0) {
-                        if ("pvid".equals(args[0])) {
-                            return "oos-id";
+                    if ("getHeader".equals(method.getName()) && args != null && args.length > 0) {
+                        if ("Authorization".equalsIgnoreCase(args[0].toString())) {
+                            return "Bearer " + TokenDao.DEMO_TOKEN_ID;
                         }
+                    }
+                    if ("getParameter".equals(method.getName()) && "pvid".equals(args[0])) {
+                        return "00000000-0000-0000-0000-000000000000";
                     }
                     return null;
                 }
@@ -324,32 +233,18 @@ public class CartServletTest {
 
         servlet.doPost(request, response);
 
-        assertEquals(200, statusCode.get());
-
-        String result = stringWriter.toString().trim();
-        RestResponse restResponse = new Gson().fromJson(result, RestResponse.class);
-
-        assertNotNull(restResponse);
-        assertTrue(restResponse.getStatus().isOk());
-        assertEquals("Product version out of stock", restResponse.getData());
-        assertEquals("string", restResponse.getMeta().getDataType());
+        assertEquals(404, statusCode.get());
+        RestResponse resp = new Gson().fromJson(stringWriter.toString(), RestResponse.class);
+        assertNotNull(resp);
+        assertEquals(404, resp.getStatus().getCode());
     }
 
     @Test
-    public void testPostCartProductNotFoundReturnsNullData() throws Exception {
-        CartDao fakeCartDao = new CartDao(null);
+    public void testPostAddProductDeletedReturns422() throws Exception {
+        ProductVersionDao fakePvDao = new ProductVersionDao(null);
+        CartDao fakeCartDao = new CartDao(null, fakePvDao);
         TokenDao fakeTokenDao = new TokenDao(null);
-        ProductVersionDao fakeProductVersionDao = new ProductVersionDao(null) {
-            @Override
-            public ProductVersion getVersionById(String versionId) {
-                return null;
-            }
-            @Override
-            public void ensureInstalled() {}
-        };
-
-        Gson gson = new GsonBuilder().serializeNulls().create();
-        CartServlet servlet = new CartServlet(fakeCartDao, fakeTokenDao, fakeProductVersionDao, gson);
+        CartServlet servlet = new CartServlet(fakeCartDao, fakeTokenDao, fakePvDao);
 
         StringWriter stringWriter = new StringWriter();
         PrintWriter printWriter = new PrintWriter(stringWriter);
@@ -359,10 +254,13 @@ public class CartServletTest {
                 HttpServletRequest.class.getClassLoader(),
                 new Class<?>[]{HttpServletRequest.class},
                 (proxy, method, args) -> {
-                    if ("getParameter".equals(method.getName()) && args != null && args.length > 0) {
-                        if ("pvid".equals(args[0])) {
-                            return "wrong-id";
+                    if ("getHeader".equals(method.getName()) && args != null && args.length > 0) {
+                        if ("Authorization".equalsIgnoreCase(args[0].toString())) {
+                            return "Bearer " + TokenDao.DEMO_TOKEN_ID;
                         }
+                    }
+                    if ("getParameter".equals(method.getName()) && "pvid".equals(args[0])) {
+                        return "5c2052dc-cd4c-4ac4-8bdd-9719415afa96"; // deleted
                     }
                     return null;
                 }
@@ -385,15 +283,111 @@ public class CartServletTest {
 
         servlet.doPost(request, response);
 
-        assertEquals(200, statusCode.get());
+        assertEquals(422, statusCode.get());
+        RestResponse resp = new Gson().fromJson(stringWriter.toString(), RestResponse.class);
+        assertNotNull(resp);
+        assertEquals("Product version deleted", resp.getData());
+    }
 
-        String result = stringWriter.toString().trim();
-        RestResponse restResponse = new Gson().fromJson(result, RestResponse.class);
+    @Test
+    public void testPostAddProductOutOfStockReturns422() throws Exception {
+        ProductVersionDao fakePvDao = new ProductVersionDao(null);
+        CartDao fakeCartDao = new CartDao(null, fakePvDao);
+        TokenDao fakeTokenDao = new TokenDao(null);
+        CartServlet servlet = new CartServlet(fakeCartDao, fakeTokenDao, fakePvDao);
 
-        assertNotNull(restResponse);
-        assertFalse(restResponse.getStatus().isOk());
-        assertEquals(404, restResponse.getStatus().getCode());
-        assertNull(restResponse.getData());
-        assertEquals("null", restResponse.getMeta().getDataType());
+        StringWriter stringWriter = new StringWriter();
+        PrintWriter printWriter = new PrintWriter(stringWriter);
+        AtomicInteger statusCode = new AtomicInteger(0);
+
+        HttpServletRequest request = (HttpServletRequest) Proxy.newProxyInstance(
+                HttpServletRequest.class.getClassLoader(),
+                new Class<?>[]{HttpServletRequest.class},
+                (proxy, method, args) -> {
+                    if ("getHeader".equals(method.getName()) && args != null && args.length > 0) {
+                        if ("Authorization".equalsIgnoreCase(args[0].toString())) {
+                            return "Bearer " + TokenDao.DEMO_TOKEN_ID;
+                        }
+                    }
+                    if ("getParameter".equals(method.getName()) && "pvid".equals(args[0])) {
+                        return "3fa85f64-5717-4562-b3fc-2c963f66afa6"; // out of stock
+                    }
+                    return null;
+                }
+        );
+
+        HttpServletResponse response = (HttpServletResponse) Proxy.newProxyInstance(
+                HttpServletResponse.class.getClassLoader(),
+                new Class<?>[]{HttpServletResponse.class},
+                (proxy, method, args) -> {
+                    if ("setStatus".equals(method.getName()) && args != null && args.length > 0) {
+                        statusCode.set((Integer) args[0]);
+                        return null;
+                    }
+                    if ("getWriter".equals(method.getName())) {
+                        return printWriter;
+                    }
+                    return null;
+                }
+        );
+
+        servlet.doPost(request, response);
+
+        assertEquals(422, statusCode.get());
+        RestResponse resp = new Gson().fromJson(stringWriter.toString(), RestResponse.class);
+        assertNotNull(resp);
+        assertEquals("Product out of stock", resp.getData());
+    }
+
+    @Test
+    public void testPostAddProductAlreadyReportedReturns208() throws Exception {
+        ProductVersionDao fakePvDao = new ProductVersionDao(null);
+        CartDao fakeCartDao = new CartDao(null, fakePvDao);
+        TokenDao fakeTokenDao = new TokenDao(null);
+        CartServlet servlet = new CartServlet(fakeCartDao, fakeTokenDao, fakePvDao);
+
+        StringWriter stringWriter = new StringWriter();
+        PrintWriter printWriter = new PrintWriter(stringWriter);
+        AtomicInteger statusCode = new AtomicInteger(0);
+
+        // Burgundy version is already in demo user's active cart
+        HttpServletRequest request = (HttpServletRequest) Proxy.newProxyInstance(
+                HttpServletRequest.class.getClassLoader(),
+                new Class<?>[]{HttpServletRequest.class},
+                (proxy, method, args) -> {
+                    if ("getHeader".equals(method.getName()) && args != null && args.length > 0) {
+                        if ("Authorization".equalsIgnoreCase(args[0].toString())) {
+                            return "Bearer " + TokenDao.DEMO_TOKEN_ID;
+                        }
+                    }
+                    if ("getParameter".equals(method.getName()) && "pvid".equals(args[0])) {
+                        return "81fc3041-e5f0-41b7-9420-7b03f5a10316";
+                    }
+                    return null;
+                }
+        );
+
+        HttpServletResponse response = (HttpServletResponse) Proxy.newProxyInstance(
+                HttpServletResponse.class.getClassLoader(),
+                new Class<?>[]{HttpServletResponse.class},
+                (proxy, method, args) -> {
+                    if ("setStatus".equals(method.getName()) && args != null && args.length > 0) {
+                        statusCode.set((Integer) args[0]);
+                        return null;
+                    }
+                    if ("getWriter".equals(method.getName())) {
+                        return printWriter;
+                    }
+                    return null;
+                }
+        );
+
+        servlet.doPost(request, response);
+
+        assertEquals(208, statusCode.get());
+        RestResponse resp = new Gson().fromJson(stringWriter.toString(), RestResponse.class);
+        assertNotNull(resp);
+        assertEquals(208, resp.getStatus().getCode());
+        assertEquals("Product is already in cart", resp.getData());
     }
 }

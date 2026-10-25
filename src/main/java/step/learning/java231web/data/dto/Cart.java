@@ -13,31 +13,48 @@ public class Cart {
     private Date createdAt;
     private Date closedAt;
     private int status; // 0 - active, 1 - closed
-    private List<CartItem> items = new ArrayList<>();
+    private double price;
+    private List<CartItem> cartItems = new ArrayList<>();
 
     public Cart() {
     }
 
     public static Cart fromResultSet(ResultSet rs) {
         try {
-            String cartId = rs.getString("cart_id");
+            String cartId = null;
+            try {
+                cartId = rs.getString("cart_id");
+            } catch (SQLException ignored) {}
+            if (cartId == null) {
+                try {
+                    cartId = rs.getString("id");
+                } catch (SQLException ignored) {}
+            }
             if (cartId == null) {
                 return null;
             }
             Cart cart = new Cart();
             cart.setId(cartId);
-            cart.setUserId(rs.getString("user_id"));
-            Timestamp tsCreated = rs.getTimestamp("cart_create_dt");
-            if (tsCreated != null) {
-                cart.setCreatedAt(new Date(tsCreated.getTime()));
-            }
-            Timestamp tsClosed = rs.getTimestamp("cart_close_dt");
-            if (tsClosed != null) {
-                cart.setClosedAt(new Date(tsClosed.getTime()));
-            }
-            cart.setStatus(rs.getInt("cart_status"));
+            try {
+                cart.setUserId(rs.getString("user_id"));
+            } catch (SQLException ignored) {}
+            try {
+                Timestamp tsCreated = rs.getTimestamp("cart_create_dt");
+                if (tsCreated != null) {
+                    cart.setCreatedAt(new Date(tsCreated.getTime()));
+                }
+            } catch (SQLException ignored) {}
+            try {
+                Timestamp tsClosed = rs.getTimestamp("cart_close_dt");
+                if (tsClosed != null) {
+                    cart.setClosedAt(new Date(tsClosed.getTime()));
+                }
+            } catch (SQLException ignored) {}
+            try {
+                cart.setStatus(rs.getInt("cart_status"));
+            } catch (SQLException ignored) {}
             return cart;
-        } catch (SQLException ex) {
+        } catch (Exception ex) {
             return null;
         }
     }
@@ -87,12 +104,29 @@ public class Cart {
         return this;
     }
 
+    public double getPrice() {
+        return price;
+    }
+
+    public Cart setPrice(double price) {
+        this.price = price;
+        return this;
+    }
+
+    public List<CartItem> getCartItems() {
+        return cartItems;
+    }
+
+    public Cart setCartItems(List<CartItem> cartItems) {
+        this.cartItems = cartItems != null ? cartItems : new ArrayList<>();
+        return this;
+    }
+
     public List<CartItem> getItems() {
-        return items;
+        return cartItems;
     }
 
     public Cart setItems(List<CartItem> items) {
-        this.items = items != null ? items : new ArrayList<>();
-        return this;
+        return setCartItems(items);
     }
 }

@@ -10,7 +10,7 @@ public class CartItem {
     private String cartId;
     private String productId;
     private String productVersionId;
-    private int count;
+    private int quantity = 1;
     private double price;
     private Date addDt;
 
@@ -22,23 +22,53 @@ public class CartItem {
 
     public static CartItem fromResultSet(ResultSet rs) {
         try {
-            String itemId = rs.getString("cart_item_id");
+            String itemId = null;
+            try {
+                itemId = rs.getString("cart_item_id");
+            } catch (SQLException ignored) {}
+            if (itemId == null) {
+                try {
+                    itemId = rs.getString("id");
+                } catch (SQLException ignored) {}
+            }
             if (itemId == null) {
                 return null;
             }
             CartItem item = new CartItem();
             item.setId(itemId);
-            item.setCartId(rs.getString("cart_id"));
-            item.setProductId(rs.getString("product_id"));
-            item.setProductVersionId(rs.getString("product_version_id"));
-            item.setCount(rs.getInt("cnt"));
-            item.setPrice(rs.getDouble("price"));
-            Timestamp ts = rs.getTimestamp("add_dt");
-            if (ts != null) {
-                item.setAddDt(new Date(ts.getTime()));
+            try {
+                item.setCartId(rs.getString("cart_id"));
+            } catch (SQLException ignored) {}
+            try {
+                item.setProductId(rs.getString("product_id"));
+            } catch (SQLException ignored) {}
+            try {
+                item.setProductVersionId(rs.getString("product_version_id"));
+            } catch (SQLException ignored) {}
+
+            int q = 1;
+            try {
+                q = rs.getInt("cnt");
+            } catch (SQLException ignored) {
+                try {
+                    q = rs.getInt("quantity");
+                } catch (SQLException ignored2) {}
             }
+            item.setQuantity(q);
+
+            try {
+                item.setPrice(rs.getDouble("price"));
+            } catch (SQLException ignored) {}
+
+            try {
+                Timestamp ts = rs.getTimestamp("add_dt");
+                if (ts != null) {
+                    item.setAddDt(new Date(ts.getTime()));
+                }
+            } catch (SQLException ignored) {}
+
             return item;
-        } catch (SQLException ex) {
+        } catch (Exception ex) {
             return null;
         }
     }
@@ -79,12 +109,21 @@ public class CartItem {
         return this;
     }
 
+    public int getQuantity() {
+        return quantity;
+    }
+
+    public CartItem setQuantity(int quantity) {
+        this.quantity = quantity;
+        return this;
+    }
+
     public int getCount() {
-        return count;
+        return quantity;
     }
 
     public CartItem setCount(int count) {
-        this.count = count;
+        this.quantity = count;
         return this;
     }
 
