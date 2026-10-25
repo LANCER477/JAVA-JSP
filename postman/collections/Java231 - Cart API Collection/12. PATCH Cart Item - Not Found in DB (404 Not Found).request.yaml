@@ -1,0 +1,25 @@
+$kind: http-request
+description: "Перевірка ДЗ: ciid взагалі не існує в БД (404 Not Found)"
+url: "{{host}}/cart?ciid=non-existent-ciid&delta=1"
+method: PATCH
+headers:
+  Authorization: Bearer {{user6}}
+queryParams:
+  - key: ciid
+    value: non-existent-ciid
+    description: Позиція взагалі не існує в БД
+  - key: delta
+    value: "1"
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test('Status code is 404 Not Found', function () {
+          pm.response.to.have.status(404);
+      });
+      pm.test('Response indicates cart item was not found in DB', function () {
+          var jsonData = pm.response.json();
+          pm.expect(jsonData.status.code).to.eql(404);
+          pm.expect(jsonData.data).to.include('not found');
+      });
+    language: text/javascript
+order: 12000

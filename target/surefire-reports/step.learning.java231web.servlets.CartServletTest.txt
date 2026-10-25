@@ -1,4 +1,4 @@
 -------------------------------------------------------------------------------
 Test set: step.learning.java231web.servlets.CartServletTest
 -------------------------------------------------------------------------------
-Tests run: 7, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.032 s -- in step.learning.java231web.servlets.CartServletTest
+Tests run: 13, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.045 s -- in step.learning.java231web.servlets.CartServletTest

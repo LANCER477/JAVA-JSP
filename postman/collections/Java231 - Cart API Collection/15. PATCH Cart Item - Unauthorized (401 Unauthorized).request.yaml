@@ -1,0 +1,19 @@
+$kind: http-request
+description: Спроба оновити кошик без авторизації (401 Unauthorized)
+url: "{{host}}/cart?ciid=656b0596-9c3d-46c0-90bb-e0ec0cc0025a&delta=1"
+method: PATCH
+queryParams:
+  ciid: 656b0596-9c3d-46c0-90bb-e0ec0cc0025a
+  delta: "1"
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test('Status code is 401 Unauthorized', function () {
+          pm.response.to.have.status(401);
+      });
+      pm.test('Unauthorized response returned', function () {
+          var jsonData = pm.response.json();
+          pm.expect(jsonData.status.code).to.eql(401);
+      });
+    language: text/javascript
+order: 15000

@@ -1,0 +1,24 @@
+$kind: http-request
+description: Успішне додавання нової версії товару до активного кошику (200 OK)
+url: "{{host}}/cart?pvid=f1e287b9-3902-49c7-921c-05df55825276"
+method: POST
+headers:
+  Authorization: Bearer {{user6}}
+queryParams:
+  - key: pvid
+    value: f1e287b9-3902-49c7-921c-05df55825276
+    description: ID версії товару, що додається
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test('Status code is 200 OK', function () {
+          pm.response.to.have.status(200);
+      });
+      pm.test('Product added to active cart successfully', function () {
+          var jsonData = pm.response.json();
+          pm.expect(jsonData.status.isOk).to.be.true;
+          pm.expect(jsonData.status.code).to.eql(200);
+          pm.expect(jsonData.data).to.have.property('cartItems');
+      });
+    language: text/javascript
+order: 3000

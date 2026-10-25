@@ -1,0 +1,18 @@
+$kind: http-request
+description: Спроба додати товар без заголовка авторизації (401 Unauthorized)
+url: "{{host}}/cart?pvid=f1e287b9-3902-49c7-921c-05df55825276"
+method: POST
+queryParams:
+  pvid: f1e287b9-3902-49c7-921c-05df55825276
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test('Status code is 401 Unauthorized', function () {
+          pm.response.to.have.status(401);
+      });
+      pm.test('Unauthorized response returned', function () {
+          var jsonData = pm.response.json();
+          pm.expect(jsonData.status.code).to.eql(401);
+      });
+    language: text/javascript
+order: 9000

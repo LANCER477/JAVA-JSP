@@ -1,0 +1,23 @@
+$kind: http-request
+description: Спроба додати товар, який вже є у кошику (208 Already Reported)
+url: "{{host}}/cart?pvid=81fc3041-e5f0-41b7-9420-7b03f5a10316"
+method: POST
+headers:
+  Authorization: Bearer {{user6}}
+queryParams:
+  - key: pvid
+    value: 81fc3041-e5f0-41b7-9420-7b03f5a10316
+    description: Burgundy edition - вже є в кошику
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test('Status code is 208 Already Reported', function () {
+          pm.response.to.have.status(208);
+      });
+      pm.test('Response message indicates product is already in cart', function () {
+          var jsonData = pm.response.json();
+          pm.expect(jsonData.status.code).to.eql(208);
+          pm.expect(jsonData.data).to.eql('Product is already in cart');
+      });
+    language: text/javascript
+order: 4000

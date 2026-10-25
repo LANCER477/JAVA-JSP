@@ -11,3 +11,4 @@ localResources:
 cloudResources:
   collections:
     ../Java231: 7b771a5b-cart-231-collection-id
+    ../postman/collections/Java231 - Cart API Collection: 85ed6dba-ffa2-4064-8a76-47627eecc4af

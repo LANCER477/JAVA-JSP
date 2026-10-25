@@ -1,0 +1,20 @@
+$kind: http-request
+description: "Помилка: відсутній або некоректний параметр зміни кількості delta (422 Unprocessable Content)"
+url: "{{host}}/cart?ciid=656b0596-9c3d-46c0-90bb-e0ec0cc0025a"
+method: PATCH
+headers:
+  Authorization: Bearer {{user6}}
+queryParams:
+  ciid: 656b0596-9c3d-46c0-90bb-e0ec0cc0025a
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test('Status code is 422 Unprocessable Content', function () {
+          pm.response.to.have.status(422);
+      });
+      pm.test('Response indicates missing or invalid delta parameter', function () {
+          var jsonData = pm.response.json();
+          pm.expect(jsonData.status.code).to.eql(422);
+      });
+    language: text/javascript
+order: 14000

@@ -1,0 +1,23 @@
+$kind: http-request
+description: "Помилка: товару немає на складі (422 Unprocessable Content)"
+url: "{{host}}/cart?pvid=3fa85f64-5717-4562-b3fc-2c963f66afa6"
+method: POST
+headers:
+  Authorization: Bearer {{user6}}
+queryParams:
+  - key: pvid
+    value: 3fa85f64-5717-4562-b3fc-2c963f66afa6
+    description: ID версії товару, якої немає на складі (stock = 0)
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test('Status code is 422 Unprocessable Content', function () {
+          pm.response.to.have.status(422);
+      });
+      pm.test('Response says product out of stock', function () {
+          var jsonData = pm.response.json();
+          pm.expect(jsonData.status.code).to.eql(422);
+          pm.expect(jsonData.data).to.eql('Product out of stock');
+      });
+    language: text/javascript
+order: 8000

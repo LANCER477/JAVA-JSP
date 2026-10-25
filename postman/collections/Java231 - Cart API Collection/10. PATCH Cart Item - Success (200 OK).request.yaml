@@ -1,0 +1,26 @@
+$kind: http-request
+description: Успішне оновлення кількості товару у власному кошику (200 OK)
+url: "{{host}}/cart?ciid=656b0596-9c3d-46c0-90bb-e0ec0cc0025a&delta=1"
+method: PATCH
+headers:
+  Authorization: Bearer {{user6}}
+queryParams:
+  - key: ciid
+    value: 656b0596-9c3d-46c0-90bb-e0ec0cc0025a
+    description: ID позиції у власному кошику
+  - key: delta
+    value: "1"
+    description: Зміна кількості (+1)
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test('Status code is 200 OK', function () {
+          pm.response.to.have.status(200);
+      });
+      pm.test('Cart item quantity updated successfully', function () {
+          var jsonData = pm.response.json();
+          pm.expect(jsonData.status.code).to.eql(200);
+          pm.expect(jsonData.data).to.have.property('cartItems');
+      });
+    language: text/javascript
+order: 10000

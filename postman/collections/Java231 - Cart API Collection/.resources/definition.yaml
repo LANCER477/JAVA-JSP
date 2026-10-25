@@ -1,0 +1,5 @@
+$kind: collection
+description: Повна колекція Postman для випробування усіх варіантів роботи точки /cart (успішних та помилкових).
+variables:
+  host: http://localhost:8080/java231web
+  user6: 024ad494-bafd-11f1-9d1a-84ba59d7b864

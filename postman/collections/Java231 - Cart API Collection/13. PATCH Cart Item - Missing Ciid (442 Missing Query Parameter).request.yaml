@@ -1,0 +1,21 @@
+$kind: http-request
+description: "Помилка: не передано обов'язковий параметр 'ciid' (442 Missing Parameter)"
+url: "{{host}}/cart?delta=1"
+method: PATCH
+headers:
+  Authorization: Bearer {{user6}}
+queryParams:
+  delta: "1"
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test('Status code is 442 Missing Query Parameter', function () {
+          pm.response.to.have.status(442);
+      });
+      pm.test('Response data explains ciid is missing', function () {
+          var jsonData = pm.response.json();
+          pm.expect(jsonData.status.code).to.eql(442);
+          pm.expect(jsonData.data).to.include('ciid');
+      });
+    language: text/javascript
+order: 13000

@@ -1,0 +1,731 @@
+{
+  "info": {
+    "_postman_id": "c82f9d14-b6a1-427d-93d4-729c48831fa1",
+    "name": "Java231 - Cart API Collection",
+    "description": "Повна колекція Postman для випробування усіх варіантів роботи точки /cart (успішних та помилкових).",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "host",
+      "value": "http://localhost:8080/java231web",
+      "type": "string"
+    },
+    {
+      "key": "user6",
+      "value": "024ad494-bafd-11f1-9d1a-84ba59d7b864",
+      "type": "string"
+    }
+  ],
+  "item": [
+    {
+      "name": "1. GET Active Cart - Success (200 OK)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status code is 200 OK', function () {",
+              "    pm.response.to.have.status(200);",
+              "});",
+              "pm.test('Response returns active cart with items and price', function () {",
+              "    var jsonData = pm.response.json();",
+              "    pm.expect(jsonData).to.have.property('id');",
+              "    pm.expect(jsonData).to.have.property('userId');",
+              "    pm.expect(jsonData).to.have.property('cartItems');",
+              "    pm.expect(jsonData).to.have.property('price');",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{user6}}",
+            "type": "text"
+          }
+        ],
+        "url": {
+          "raw": "{{host}}/cart",
+          "host": [
+            "{{host}}"
+          ],
+          "path": [
+            "cart"
+          ]
+        },
+        "description": "Успішне отримання активного кошику авторизованого користувача (200 OK)"
+      },
+      "response": []
+    },
+    {
+      "name": "2. GET Active Cart - Unauthorized (401 Unauthorized)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status code is 401 Unauthorized', function () {",
+              "    pm.response.to.have.status(401);",
+              "});",
+              "pm.test('Response contains Unauthorized error metadata', function () {",
+              "    var jsonData = pm.response.json();",
+              "    pm.expect(jsonData.status.isOk).to.be.false;",
+              "    pm.expect(jsonData.status.code).to.eql(401);",
+              "    pm.expect(jsonData.meta.serviceName).to.eql(\"API 'User carts'\");",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{host}}/cart",
+          "host": [
+            "{{host}}"
+          ],
+          "path": [
+            "cart"
+          ]
+        },
+        "description": "Спроба отримати кошик без авторизації (401 Unauthorized)"
+      },
+      "response": []
+    },
+    {
+      "name": "3. POST Add Product - Success (200 OK)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status code is 200 OK', function () {",
+              "    pm.response.to.have.status(200);",
+              "});",
+              "pm.test('Product added to active cart successfully', function () {",
+              "    var jsonData = pm.response.json();",
+              "    pm.expect(jsonData.status.isOk).to.be.true;",
+              "    pm.expect(jsonData.status.code).to.eql(200);",
+              "    pm.expect(jsonData.data).to.have.property('cartItems');",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{user6}}",
+            "type": "text"
+          }
+        ],
+        "url": {
+          "raw": "{{host}}/cart?pvid=f1e287b9-3902-49c7-921c-05df55825276",
+          "host": [
+            "{{host}}"
+          ],
+          "path": [
+            "cart"
+          ],
+          "query": [
+            {
+              "key": "pvid",
+              "value": "f1e287b9-3902-49c7-921c-05df55825276",
+              "description": "ID версії товару, що додається"
+            }
+          ]
+        },
+        "description": "Успішне додавання нової версії товару до активного кошику (200 OK)"
+      },
+      "response": []
+    },
+    {
+      "name": "4. POST Add Product - Already in Cart (208 Already Reported)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status code is 208 Already Reported', function () {",
+              "    pm.response.to.have.status(208);",
+              "});",
+              "pm.test('Response message indicates product is already in cart', function () {",
+              "    var jsonData = pm.response.json();",
+              "    pm.expect(jsonData.status.code).to.eql(208);",
+              "    pm.expect(jsonData.data).to.eql('Product is already in cart');",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{user6}}",
+            "type": "text"
+          }
+        ],
+        "url": {
+          "raw": "{{host}}/cart?pvid=81fc3041-e5f0-41b7-9420-7b03f5a10316",
+          "host": [
+            "{{host}}"
+          ],
+          "path": [
+            "cart"
+          ],
+          "query": [
+            {
+              "key": "pvid",
+              "value": "81fc3041-e5f0-41b7-9420-7b03f5a10316",
+              "description": "Burgundy edition - вже є в кошику"
+            }
+          ]
+        },
+        "description": "Спроба додати товар, який вже є у кошику (208 Already Reported)"
+      },
+      "response": []
+    },
+    {
+      "name": "5. POST Add Product - No Id (442 Missing Query Parameter)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status code is 442 Missing Required Query Parameter', function () {",
+              "    pm.response.to.have.status(442);",
+              "});",
+              "pm.test('Response data explains pvid is missing', function () {",
+              "    var jsonData = pm.response.json();",
+              "    pm.expect(jsonData.status.code).to.eql(442);",
+              "    pm.expect(jsonData.data).to.include('pvid');",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{user6}}",
+            "type": "text"
+          }
+        ],
+        "url": {
+          "raw": "{{host}}/cart",
+          "host": [
+            "{{host}}"
+          ],
+          "path": [
+            "cart"
+          ]
+        },
+        "description": "Помилка: запит без обов'язкового параметра 'pvid' (442 Missing Required Query Parameter)"
+      },
+      "response": []
+    },
+    {
+      "name": "6. POST Add Product - Err Id (404 Not Found)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status code is 404 Not Found', function () {",
+              "    pm.response.to.have.status(404);",
+              "});",
+              "pm.test('Product version was not found', function () {",
+              "    var jsonData = pm.response.json();",
+              "    pm.expect(jsonData.status.code).to.eql(404);",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{user6}}",
+            "type": "text"
+          }
+        ],
+        "url": {
+          "raw": "{{host}}/cart?pvid=wrong-id",
+          "host": [
+            "{{host}}"
+          ],
+          "path": [
+            "cart"
+          ],
+          "query": [
+            {
+              "key": "pvid",
+              "value": "wrong-id",
+              "description": "Неіснуючий ID"
+            }
+          ]
+        },
+        "description": "Помилка: передано неіснуючий або помилковий ID версії (404 Not Found)"
+      },
+      "response": []
+    },
+    {
+      "name": "7. POST Add Product - Deleted (422 Unprocessable Content)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status code is 422 Unprocessable Content', function () {",
+              "    pm.response.to.have.status(422);",
+              "});",
+              "pm.test('Response says product version deleted', function () {",
+              "    var jsonData = pm.response.json();",
+              "    pm.expect(jsonData.status.code).to.eql(422);",
+              "    pm.expect(jsonData.data).to.eql('Product version deleted');",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{user6}}",
+            "type": "text"
+          }
+        ],
+        "url": {
+          "raw": "{{host}}/cart?pvid=5c2052dc-cd4c-4ac4-8bdd-9719415afa96",
+          "host": [
+            "{{host}}"
+          ],
+          "path": [
+            "cart"
+          ],
+          "query": [
+            {
+              "key": "pvid",
+              "value": "5c2052dc-cd4c-4ac4-8bdd-9719415afa96",
+              "description": "ID видаленої версії товару"
+            }
+          ]
+        },
+        "description": "Помилка: спроба додати видалену версію товару (422 Unprocessable Content)"
+      },
+      "response": []
+    },
+    {
+      "name": "8. POST Add Product - Out Of Stock (422 Unprocessable Content)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status code is 422 Unprocessable Content', function () {",
+              "    pm.response.to.have.status(422);",
+              "});",
+              "pm.test('Response says product out of stock', function () {",
+              "    var jsonData = pm.response.json();",
+              "    pm.expect(jsonData.status.code).to.eql(422);",
+              "    pm.expect(jsonData.data).to.eql('Product out of stock');",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{user6}}",
+            "type": "text"
+          }
+        ],
+        "url": {
+          "raw": "{{host}}/cart?pvid=3fa85f64-5717-4562-b3fc-2c963f66afa6",
+          "host": [
+            "{{host}}"
+          ],
+          "path": [
+            "cart"
+          ],
+          "query": [
+            {
+              "key": "pvid",
+              "value": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
+              "description": "ID версії товару, якої немає на складі (stock = 0)"
+            }
+          ]
+        },
+        "description": "Помилка: товару немає на складі (422 Unprocessable Content)"
+      },
+      "response": []
+    },
+    {
+      "name": "9. POST Add Product - Unauthorized (401 Unauthorized)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status code is 401 Unauthorized', function () {",
+              "    pm.response.to.have.status(401);",
+              "});",
+              "pm.test('Unauthorized response returned', function () {",
+              "    var jsonData = pm.response.json();",
+              "    pm.expect(jsonData.status.code).to.eql(401);",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [],
+        "url": {
+          "raw": "{{host}}/cart?pvid=f1e287b9-3902-49c7-921c-05df55825276",
+          "host": [
+            "{{host}}"
+          ],
+          "path": [
+            "cart"
+          ],
+          "query": [
+            {
+              "key": "pvid",
+              "value": "f1e287b9-3902-49c7-921c-05df55825276"
+            }
+          ]
+        },
+        "description": "Спроба додати товар без заголовка авторизації (401 Unauthorized)"
+      },
+      "response": []
+    },
+    {
+      "name": "10. PATCH Cart Item - Success (200 OK)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status code is 200 OK', function () {",
+              "    pm.response.to.have.status(200);",
+              "});",
+              "pm.test('Cart item quantity updated successfully', function () {",
+              "    var jsonData = pm.response.json();",
+              "    pm.expect(jsonData.status.code).to.eql(200);",
+              "    pm.expect(jsonData.data).to.have.property('cartItems');",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "PATCH",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{user6}}",
+            "type": "text"
+          }
+        ],
+        "url": {
+          "raw": "{{host}}/cart?ciid=656b0596-9c3d-46c0-90bb-e0ec0cc0025a&delta=1",
+          "host": [
+            "{{host}}"
+          ],
+          "path": [
+            "cart"
+          ],
+          "query": [
+            {
+              "key": "ciid",
+              "value": "656b0596-9c3d-46c0-90bb-e0ec0cc0025a",
+              "description": "ID позиції у власному кошику"
+            },
+            {
+              "key": "delta",
+              "value": "1",
+              "description": "Зміна кількості (+1)"
+            }
+          ]
+        },
+        "description": "Успішне оновлення кількості товару у власному кошику (200 OK)"
+      },
+      "response": []
+    },
+    {
+      "name": "11. PATCH Cart Item - Belongs to Another Entity (403 Forbidden)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status code is 403 Forbidden', function () {",
+              "    pm.response.to.have.status(403);",
+              "});",
+              "pm.test('Response indicates item belongs to another entity', function () {",
+              "    var jsonData = pm.response.json();",
+              "    pm.expect(jsonData.status.code).to.eql(403);",
+              "    pm.expect(jsonData.data).to.include('belongs to another entity');",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "PATCH",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{user6}}",
+            "type": "text"
+          }
+        ],
+        "url": {
+          "raw": "{{host}}/cart?ciid=77777777-7777-7777-7777-777777777777&delta=1",
+          "host": [
+            "{{host}}"
+          ],
+          "path": [
+            "cart"
+          ],
+          "query": [
+            {
+              "key": "ciid",
+              "value": "77777777-7777-7777-7777-777777777777",
+              "description": "ID позиції, що існує в БД, але належить іншій сутності / іншому кошику"
+            },
+            {
+              "key": "delta",
+              "value": "1"
+            }
+          ]
+        },
+        "description": "Перевірка ДЗ: ciid існує в БД, але належить іншому кошику / іншій сутності (403 Forbidden)"
+      },
+      "response": []
+    },
+    {
+      "name": "12. PATCH Cart Item - Not Found in DB (404 Not Found)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status code is 404 Not Found', function () {",
+              "    pm.response.to.have.status(404);",
+              "});",
+              "pm.test('Response indicates cart item was not found in DB', function () {",
+              "    var jsonData = pm.response.json();",
+              "    pm.expect(jsonData.status.code).to.eql(404);",
+              "    pm.expect(jsonData.data).to.include('not found');",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "PATCH",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{user6}}",
+            "type": "text"
+          }
+        ],
+        "url": {
+          "raw": "{{host}}/cart?ciid=non-existent-ciid&delta=1",
+          "host": [
+            "{{host}}"
+          ],
+          "path": [
+            "cart"
+          ],
+          "query": [
+            {
+              "key": "ciid",
+              "value": "non-existent-ciid",
+              "description": "Позиція взагалі не існує в БД"
+            },
+            {
+              "key": "delta",
+              "value": "1"
+            }
+          ]
+        },
+        "description": "Перевірка ДЗ: ciid взагалі не існує в БД (404 Not Found)"
+      },
+      "response": []
+    },
+    {
+      "name": "13. PATCH Cart Item - Missing Ciid (442 Missing Query Parameter)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status code is 442 Missing Query Parameter', function () {",
+              "    pm.response.to.have.status(442);",
+              "});",
+              "pm.test('Response data explains ciid is missing', function () {",
+              "    var jsonData = pm.response.json();",
+              "    pm.expect(jsonData.status.code).to.eql(442);",
+              "    pm.expect(jsonData.data).to.include('ciid');",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "PATCH",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{user6}}",
+            "type": "text"
+          }
+        ],
+        "url": {
+          "raw": "{{host}}/cart?delta=1",
+          "host": [
+            "{{host}}"
+          ],
+          "path": [
+            "cart"
+          ],
+          "query": [
+            {
+              "key": "delta",
+              "value": "1"
+            }
+          ]
+        },
+        "description": "Помилка: не передано обов'язковий параметр 'ciid' (442 Missing Parameter)"
+      },
+      "response": []
+    },
+    {
+      "name": "14. PATCH Cart Item - Missing Delta (422 Unprocessable Content)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status code is 422 Unprocessable Content', function () {",
+              "    pm.response.to.have.status(422);",
+              "});",
+              "pm.test('Response indicates missing or invalid delta parameter', function () {",
+              "    var jsonData = pm.response.json();",
+              "    pm.expect(jsonData.status.code).to.eql(422);",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "PATCH",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{user6}}",
+            "type": "text"
+          }
+        ],
+        "url": {
+          "raw": "{{host}}/cart?ciid=656b0596-9c3d-46c0-90bb-e0ec0cc0025a",
+          "host": [
+            "{{host}}"
+          ],
+          "path": [
+            "cart"
+          ],
+          "query": [
+            {
+              "key": "ciid",
+              "value": "656b0596-9c3d-46c0-90bb-e0ec0cc0025a"
+            }
+          ]
+        },
+        "description": "Помилка: відсутній або некоректний параметр зміни кількості delta (422 Unprocessable Content)"
+      },
+      "response": []
+    },
+    {
+      "name": "15. PATCH Cart Item - Unauthorized (401 Unauthorized)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status code is 401 Unauthorized', function () {",
+              "    pm.response.to.have.status(401);",
+              "});",
+              "pm.test('Unauthorized response returned', function () {",
+              "    var jsonData = pm.response.json();",
+              "    pm.expect(jsonData.status.code).to.eql(401);",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "PATCH",
+        "header": [],
+        "url": {
+          "raw": "{{host}}/cart?ciid=656b0596-9c3d-46c0-90bb-e0ec0cc0025a&delta=1",
+          "host": [
+            "{{host}}"
+          ],
+          "path": [
+            "cart"
+          ],
+          "query": [
+            {
+              "key": "ciid",
+              "value": "656b0596-9c3d-46c0-90bb-e0ec0cc0025a"
+            },
+            {
+              "key": "delta",
+              "value": "1"
+            }
+          ]
+        },
+        "description": "Спроба оновити кошик без авторизації (401 Unauthorized)"
+      },
+      "response": []
+    }
+  ]
+}

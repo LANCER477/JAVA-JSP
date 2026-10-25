@@ -1,0 +1,21 @@
+$kind: http-request
+description: Успішне отримання активного кошику авторизованого користувача (200 OK)
+url: "{{host}}/cart"
+method: GET
+headers:
+  Authorization: Bearer {{user6}}
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test('Status code is 200 OK', function () {
+          pm.response.to.have.status(200);
+      });
+      pm.test('Response returns active cart with items and price', function () {
+          var jsonData = pm.response.json();
+          pm.expect(jsonData).to.have.property('id');
+          pm.expect(jsonData).to.have.property('userId');
+          pm.expect(jsonData).to.have.property('cartItems');
+          pm.expect(jsonData).to.have.property('price');
+      });
+    language: text/javascript
+order: 1000

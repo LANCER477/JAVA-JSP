@@ -1,0 +1,25 @@
+$kind: http-request
+description: "Перевірка ДЗ: ciid існує в БД, але належить іншому кошику / іншій сутності (403 Forbidden)"
+url: "{{host}}/cart?ciid=77777777-7777-7777-7777-777777777777&delta=1"
+method: PATCH
+headers:
+  Authorization: Bearer {{user6}}
+queryParams:
+  - key: ciid
+    value: 77777777-7777-7777-7777-777777777777
+    description: ID позиції, що існує в БД, але належить іншій сутності / іншому кошику
+  - key: delta
+    value: "1"
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test('Status code is 403 Forbidden', function () {
+          pm.response.to.have.status(403);
+      });
+      pm.test('Response indicates item belongs to another entity', function () {
+          var jsonData = pm.response.json();
+          pm.expect(jsonData.status.code).to.eql(403);
+          pm.expect(jsonData.data).to.include('belongs to another entity');
+      });
+    language: text/javascript
+order: 11000

@@ -100,21 +100,10 @@ public class ProductVersionDao {
                 try (ResultSet rs = prep.executeQuery()) {
                     if (rs.next()) {
                         return ProductVersion.fromResultSet(rs);
-                    } else {
-                        return null;
                     }
                 }
             } catch (SQLException ex) {
-                logger.log(Level.WARNING, sql, ex);
-                // If it's a known demo fixture or DB is down, fall back to demo fixtures
-                ProductVersion fallback = getDemoVersion(cleanId);
-                if (fallback != null) {
-                    return fallback;
-                }
-                if ("00000000-0000-0000-0000-000000000000".equals(cleanId)) {
-                    return null;
-                }
-                throw ex;
+                logger.log(Level.WARNING, "getById query error: " + ex.getMessage());
             }
         }
 

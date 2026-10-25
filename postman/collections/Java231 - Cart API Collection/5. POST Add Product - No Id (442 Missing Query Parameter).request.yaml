@@ -1,0 +1,19 @@
+$kind: http-request
+description: "Помилка: запит без обов'язкового параметра 'pvid' (442 Missing Required Query Parameter)"
+url: "{{host}}/cart"
+method: POST
+headers:
+  Authorization: Bearer {{user6}}
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test('Status code is 442 Missing Required Query Parameter', function () {
+          pm.response.to.have.status(442);
+      });
+      pm.test('Response data explains pvid is missing', function () {
+          var jsonData = pm.response.json();
+          pm.expect(jsonData.status.code).to.eql(442);
+          pm.expect(jsonData.data).to.include('pvid');
+      });
+    language: text/javascript
+order: 5000

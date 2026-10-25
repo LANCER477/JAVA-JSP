@@ -51,6 +51,14 @@ public class RestResponse {
         return new RestResponse(RestStatus.QueryParamMissed, meta, data);
     }
 
+    public static RestResponse Forbidden(RestMeta meta, Object data) {
+        return new RestResponse(RestStatus.Forbidden, meta, data);
+    }
+
+    public static RestResponse Conflict(RestMeta meta, Object data) {
+        return new RestResponse(RestStatus.Conflict, meta, data);
+    }
+
     public RestStatus getStatus() {
         return status;
     }
