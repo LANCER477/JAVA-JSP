@@ -1,0 +1,23 @@
+$kind: http-request
+name: 9. PATCH Cart Item - Missing Delta Parameter [422 Unprocessable Content]
+description: "Помилка валідації: передано ciid, але не передано параметр delta або cnt для зміни кількості. Повертає 422 Unprocessable Content."
+url: "{{host}}/cart?ciid={{ciid}}"
+method: PATCH
+headers:
+  Authorization: Bearer {{user6}}
+queryParams:
+  - key: ciid
+    value: "{{ciid}}"
+    description: Змінна {{ciid}}
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test('Status code is 422 Unprocessable Content', function () {
+          pm.response.to.have.status(422);
+      });
+      pm.test('Response indicates delta/cnt parameter is missing', function () {
+          var jsonData = pm.response.json();
+          pm.expect(jsonData.status.code).to.eql(422);
+      });
+    language: text/javascript
+order: 10000

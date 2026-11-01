@@ -1,0 +1,26 @@
+$kind: http-request
+description: "Граничний випадок: перевищення наявності товару на складі. Повертає 200 OK із повідомленням 'exceeded stock limit'."
+url: "{{host}}/cart?ciid={{ciid}}&delta=9999"
+method: PATCH
+headers:
+  Authorization: Bearer {{user6}}
+queryParams:
+  - key: ciid
+    value: "{{ciid}}"
+    description: Змінна {{ciid}}
+  - key: delta
+    value: "9999"
+    description: Перевищення залишку на складі
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test('Status code is 200 OK', function () {
+          pm.response.to.have.status(200);
+      });
+      pm.test('Response warns about exceeding stock limit', function () {
+          var jsonData = pm.response.json();
+          pm.expect(jsonData.status.code).to.eql(200);
+          pm.expect(jsonData.data).to.include('exceeded stock limit');
+      });
+    language: text/javascript
+order: 5000

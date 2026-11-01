@@ -20,6 +20,7 @@ import java.util.stream.Collectors;
 import step.learning.java231web.dao.UserDao;
 import step.learning.java231web.models.UserAccessItem;
 import step.learning.java231web.models.UserSignupFormModel;
+import step.learning.java231web.rest.RestMeta;
 import step.learning.java231web.rest.RestPagination;
 import step.learning.java231web.rest.RestResponse;
 import step.learning.java231web.rest.RestStatus;
@@ -186,22 +187,40 @@ public class UserServlet extends HttpServlet {
             return;
         }
 
-        Map<String, Object> payload = new LinkedHashMap<>();
-        payload.put("sub", login);
-        payload.put("name", login);
-        payload.put("email", login.contains("@") ? login : login + "@example.com");
-        payload.put("dob", "2026-01-01");
-        payload.put("ava", "/img/user.jpg");
+        Map<String, Object> data = new LinkedHashMap<>();
+        String displayName = login;
+        if ("user1".equalsIgnoreCase(login)) {
+            displayName = "User 1";
+        } else if (login.toLowerCase().startsWith("user") && login.length() > 4) {
+            displayName = "User " + login.substring(4);
+        }
+        data.put("name", displayName);
+        data.put("email", login.contains("@") ? login : login + "@mail.ua");
+        data.put("login", login);
+        data.put("imageUrl", "Default Image");
+        data.put("address", "Default Address");
+        data.put("dob", "Mon Sep 28 11:21:52 EEST 2026");
+        String tokenId = "user1".equalsIgnoreCase(login)
+                ? "83d45f30-bafc-11f1-918f-84ba59d7b864"
+                : java.util.UUID.randomUUID().toString();
+        data.put("token", tokenId);
 
-        String headerJson = "{\"alg\":\"none\",\"typ\":\"JWT\"}";
-        String payloadJson = gson.toJson(payload);
+        RestMeta meta = new RestMeta();
+        meta.setServiceName("API 'Users'");
+        meta.setDataType("object");
+        meta.setServerTime(System.currentTimeMillis());
+        meta.setCacheTime(0L);
+        meta.setManipulations(java.util.Arrays.asList("GET", "POST"));
+        Map<String, String> links = new LinkedHashMap<>();
+        links.put("list", "/all");
+        links.put("auth", "/");
+        meta.setLinks(links);
+        meta.setParameters(null);
+        meta.setPagination(null);
 
-        String token = Base64.getUrlEncoder().withoutPadding().encodeToString(headerJson.getBytes(StandardCharsets.UTF_8))
-                + "."
-                + Base64.getUrlEncoder().withoutPadding().encodeToString(payloadJson.getBytes(StandardCharsets.UTF_8))
-                + ".signature";
-
-        sendRest(resp, HttpServletResponse.SC_OK, RestStatus.Ok, token);
+        resp.setStatus(HttpServletResponse.SC_OK);
+        RestResponse restResponse = RestResponse.Ok(meta, data);
+        resp.getWriter().print(gson.toJson(restResponse));
     }
 
     private void sendRest(HttpServletResponse resp, int httpStatusCode, RestStatus status, Object data, String service, RestPagination pagination) throws IOException {

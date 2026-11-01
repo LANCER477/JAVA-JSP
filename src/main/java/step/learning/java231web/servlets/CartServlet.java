@@ -63,7 +63,11 @@ public class CartServlet extends HttpServlet {
         this.gson = gson != null ? gson : new GsonBuilder().serializeNulls().create();
         this.restGson = new Gson();
         this.meta = new RestMeta("API 'User carts'", "object");
-        this.meta.setManipulations(Arrays.asList("GET", "POST", "PUT", "PATCH", "DELETE"));
+        this.meta.setManipulations(Arrays.asList("GET", "POST", "DELETE", "PATCH"));
+        java.util.Map<String, String> links = new java.util.LinkedHashMap<>();
+        links.put("details", "/cart/{item-id}");
+        links.put("base", "/cart");
+        this.meta.setLinks(links);
     }
 
     @Override
@@ -89,6 +93,27 @@ public class CartServlet extends HttpServlet {
         UserToken userToken = getUserToken(req);
 
         if (userToken != null) {
+            String pathInfo = req.getPathInfo();
+            boolean isHistory = (pathInfo != null && pathInfo.contains("history"))
+                    || req.getParameter("history") != null;
+
+            if (isHistory) {
+                java.util.List<Cart> history = null;
+                if (cartDao != null) {
+                    try {
+                        history = cartDao.getUserCartHistory(userToken.getUserId());
+                    } catch (Exception ignored) {}
+                }
+                if (history == null) {
+                    history = Collections.emptyList();
+                }
+                RestMeta historyMeta = createMeta(null, "array");
+                RestResponse okResponse = RestResponse.Ok(historyMeta, history);
+                resp.setStatus(HttpServletResponse.SC_OK);
+                resp.getWriter().print(gson.toJson(okResponse));
+                return;
+            }
+
             Cart cart = null;
             if (cartDao != null) {
                 try {
@@ -102,8 +127,11 @@ public class CartServlet extends HttpServlet {
                 } catch (Exception ignored) {
                 }
             }
+            meta.setServerTime(System.currentTimeMillis());
+            meta.setDataType(null);
+            RestResponse okResponse = RestResponse.Ok(meta, cart);
             resp.setStatus(HttpServletResponse.SC_OK);
-            resp.getWriter().print(gson.toJson(cart));
+            resp.getWriter().print(gson.toJson(okResponse));
             return;
         }
 
@@ -249,8 +277,12 @@ public class CartServlet extends HttpServlet {
                     "'ciid' - cart item id"
             );
         } else {
-            // Перевіряємо наявність параметра delta (+1, -1) або cnt
+            // Перевіряємо наявність параметра inc / delta (+1, -1) або cnt
+            String incStr = req.getParameter("inc");
             String deltaStr = req.getParameter("delta");
+            if (deltaStr == null) {
+                deltaStr = incStr;
+            }
             String cntStr = req.getParameter("cnt");
             Integer delta = null;
             Integer cnt = null;
@@ -269,7 +301,10 @@ public class CartServlet extends HttpServlet {
             if (delta == null && cnt == null) {
                 JsonObject jsonBody = getJsonBody(req);
                 if (jsonBody != null) {
-                    if (jsonBody.has("delta") && !jsonBody.get("delta").isJsonNull()) {
+                    if (jsonBody.has("inc") && !jsonBody.get("inc").isJsonNull()) {
+                        try { delta = jsonBody.get("inc").getAsInt(); } catch (Exception ignored) {}
+                    }
+                    if (delta == null && jsonBody.has("delta") && !jsonBody.get("delta").isJsonNull()) {
                         try { delta = jsonBody.get("delta").getAsInt(); } catch (Exception ignored) {}
                     }
                     if (jsonBody.has("cnt") && !jsonBody.get("cnt").isJsonNull()) {
@@ -310,16 +345,39 @@ public class CartServlet extends HttpServlet {
                         // Товар знайдено в кошику користувача -> оновлюємо кількість
                         try {
                             int newQuantity = delta != null ? userItem.getQuantity() + delta : cnt;
-                            if (newQuantity <= 0) {
-                                cartDao.deleteCartItem(ciid);
+
+                            ProductVersion pv = userItem.getProductVersion();
+                            if (pv == null && userItem.getProductVersionId() != null && productVersionDao != null) {
+                                try {
+                                    pv = productVersionDao.getById(userItem.getProductVersionId());
+                                } catch (Exception ignored) {}
+                            }
+
+                            String paramName = req.getParameter("inc") != null ? "'inc'" : (delta != null ? "'delta'" : "'cnt'");
+
+                            if (newQuantity < 0) {
+                                restResponse = RestResponse.Ok(
+                                        meta.setDataType("string"),
+                                        paramName + " causes negative quantity"
+                                );
+                            } else if (newQuantity == 0 || (delta != null && delta == -1 && userItem.getQuantity() <= 2)) {
+                                restResponse = RestResponse.Ok(
+                                        meta.setDataType("string"),
+                                        paramName + " causes zero quantity. For deletion use DELETE request"
+                                );
+                            } else if (pv != null && (newQuantity > pv.getStock() || (delta != null && delta > pv.getStock()))) {
+                                restResponse = RestResponse.Ok(
+                                        meta.setDataType("string"),
+                                        paramName + " exceeded stock limit"
+                                );
                             } else {
                                 cartDao.updateCartItemQuantity(ciid, newQuantity);
+                                Cart updatedCart = cartDao.getUserActiveCart(userId);
+                                restResponse = RestResponse.Ok(
+                                        meta.setDataType("object"),
+                                        updatedCart
+                                );
                             }
-                            Cart updatedCart = cartDao.getUserActiveCart(userId);
-                            restResponse = RestResponse.Ok(
-                                    meta.setDataType("object"),
-                                    updatedCart
-                            );
                         } catch (SQLException ex) {
                             restResponse = RestResponse.ErrorInternal(meta.setDataType("null"), null);
                         }
@@ -332,7 +390,7 @@ public class CartServlet extends HttpServlet {
                                 // Запис не існує в БД взагалі -> 404 Not Found
                                 restResponse = RestResponse.NotFound(
                                         meta.setDataType("string"),
-                                        "Cart item not found: " + ciid
+                                        "Cart item not found"
                                 );
                             } else {
                                 // Запис існує в БД, але належить іншому кошику / іншій сутності -> 403 Forbidden
@@ -353,6 +411,140 @@ public class CartServlet extends HttpServlet {
             resp.setStatus(restResponse.getStatus().getCode());
         }
         resp.getWriter().print(gson.toJson(restResponse));
+    }
+
+    @Override
+    protected void doDelete(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
+        resp.setContentType("application/json; charset=UTF-8");
+
+        if (cartDao != null) {
+            cartDao.ensureInstalled();
+        }
+        if (tokenDao != null) {
+            tokenDao.ensureInstalled();
+        }
+
+        UserToken userToken = getUserToken(req);
+        if (userToken == null) {
+            sendUnauthorized(resp);
+            return;
+        }
+        String userId = userToken.getUserId();
+
+        RestResponse restResponse = null;
+
+        String pathInfo = req.getPathInfo();
+        boolean isCheckout = (pathInfo != null && pathInfo.contains("checkout"))
+                || req.getParameter("checkout") != null;
+
+        String ciid = req.getParameter("ciid");
+        if (ciid == null) {
+            ciid = extractCiidFromJson(req);
+        }
+
+        try {
+            if (isCheckout) {
+                Cart cart = cartDao != null ? cartDao.getUserActiveCart(userId) : null;
+                if (cart != null) {
+                    cartDao.checkoutCart(cart.getId());
+                    cart.setStatus(0);
+                    restResponse = RestResponse.Ok(createMeta("Checkout", "object"), cart);
+                } else {
+                    restResponse = RestResponse.NotFound(createMeta("Checkout", "null"), "Active cart not found");
+                }
+            } else if (ciid != null && !ciid.trim().isEmpty()) {
+                String cleanCiid = ciid.trim();
+
+                // 1. Переконатись, що CartItem взагалі існує у БД (404 Not Found)
+                CartItem dbItem = cartDao != null ? cartDao.getCartItemById(cleanCiid) : null;
+                if (dbItem == null) {
+                    restResponse = RestResponse.NotFound(
+                            createMeta("Drop Cart Item", "string"),
+                            "Cart item not found"
+                    );
+                } else {
+                    // 2. Переконатись, що даний CartItem належить авторизованому користувачеві (403 Forbidden)
+                    Cart itemCart = cartDao != null ? cartDao.getCartById(dbItem.getCartId()) : null;
+                    String itemOwnerId = itemCart != null ? itemCart.getUserId() : null;
+                    if (itemOwnerId == null || !userId.equalsIgnoreCase(itemOwnerId)) {
+                        restResponse = RestResponse.Forbidden(
+                                createMeta("Drop Cart Item", "string"),
+                                "Cart item belongs to another entity"
+                        );
+                    } else {
+                        // 3. Переконатись, що користувач має відкритий кошик (422 Unprocessable Content)
+                        Cart activeCart = cartDao != null ? cartDao.getUserActiveCart(userId) : null;
+                        if (activeCart == null) {
+                            restResponse = RestResponse.Unprocessable(
+                                    createMeta("Drop Cart Item", "string"),
+                                    "User has no open cart"
+                            );
+                        } else {
+                            // 4. Переконатись, що він належить до активного (відкритого) кошику (409 Conflict)
+                            if (!activeCart.getId().equalsIgnoreCase(dbItem.getCartId())) {
+                                restResponse = RestResponse.Conflict(
+                                        createMeta("Drop Cart Item", "string"),
+                                        "Cart item belongs to a closed cart, not active"
+                                );
+                            } else {
+                                // 5. Всі перевірки пройдено -> видаляємо CartItem (200 OK)
+                                cartDao.deleteCartItem(cleanCiid);
+                                Cart updatedCart = cartDao.getUserActiveCart(userId);
+                                if (updatedCart == null) {
+                                    if (activeCart.getCartItems() != null) {
+                                        activeCart.getCartItems().removeIf(it -> cleanCiid.equalsIgnoreCase(it.getId()));
+                                        double p = 0;
+                                        for (CartItem it : activeCart.getCartItems()) p += it.getPrice() * it.getQuantity();
+                                        activeCart.setPrice(p);
+                                    }
+                                    updatedCart = activeCart;
+                                }
+                                restResponse = RestResponse.Ok(
+                                        createMeta("Drop Cart Item", "object"),
+                                        updatedCart
+                                );
+                            }
+                        }
+                    }
+                }
+            } else {
+                // Drop entire cart (Drop Cart)
+                Cart cart = cartDao != null ? cartDao.getUserActiveCart(userId) : null;
+                if (cart != null) {
+                    cartDao.emptyCart(cart.getId());
+                    Cart updatedCart = cartDao.getUserActiveCart(userId);
+                    if (updatedCart == null) {
+                        if (cart.getCartItems() != null) cart.getCartItems().clear();
+                        cart.setPrice(0.0);
+                        updatedCart = cart;
+                    }
+                    restResponse = RestResponse.Ok(createMeta("Drop Cart", "object"), updatedCart);
+                } else {
+                    restResponse = RestResponse.Ok(createMeta("Drop Cart", "object"), cart);
+                }
+            }
+        } catch (SQLException ex) {
+            restResponse = RestResponse.ErrorInternal(createMeta("Drop Cart Item", "null"), null);
+        }
+
+        if (restResponse != null && restResponse.getStatus() != null) {
+            resp.setStatus(restResponse.getStatus().getCode());
+        }
+        resp.getWriter().print(gson.toJson(restResponse));
+    }
+
+    private RestMeta createMeta(String action, String dataType) {
+        String baseName = "API 'User carts'";
+        String serviceName = action != null && !action.isEmpty() ? baseName + ": " + action : baseName;
+        RestMeta newMeta = new RestMeta(serviceName, dataType);
+        newMeta.setServerTime(System.currentTimeMillis());
+        newMeta.setCacheTime(1000000);
+        newMeta.setManipulations(Arrays.asList("GET", "POST", "DELETE", "PATCH"));
+        java.util.Map<String, String> links = new java.util.LinkedHashMap<>();
+        links.put("details", "/cart/{item-id}");
+        links.put("base", "/cart");
+        newMeta.setLinks(links);
+        return newMeta;
     }
 
     private UserToken getUserToken(HttpServletRequest req) {

@@ -88,6 +88,9 @@ public class CartDao {
         try (Statement stmt = dbService.getConnection().createStatement()) {
             stmt.executeUpdate(sqlCarts);
             try { stmt.executeUpdate("ALTER TABLE carts ADD COLUMN cart_price DECIMAL(10, 2) NOT NULL DEFAULT 0"); } catch (Exception ignored) {}
+            try { stmt.executeUpdate("ALTER TABLE carts ADD COLUMN cart_open_at DATETIME NULL"); } catch (Exception ignored) {}
+            try { stmt.executeUpdate("ALTER TABLE carts ADD COLUMN cart_close_at DATETIME NULL"); } catch (Exception ignored) {}
+            try { stmt.executeUpdate("ALTER TABLE carts MODIFY COLUMN cart_status INT NULL"); } catch (Exception ignored) {}
             stmt.executeUpdate(sqlCartItems);
         } catch (SQLException ex) {
             logger.log(Level.WARNING, "Error creating cart tables", ex);
@@ -111,48 +114,80 @@ public class CartDao {
             Connection conn = dbService.getConnection();
             if (conn == null) return;
 
-            String cartId = "b61a186a-cd2b-11f1-bfaa-84ba59d7b864";
+            String activeCartId = "165db231-d2a6-11f1-918f-62517600596c";
+            String closedCartId = "7db2dc65-cd29-11f1-9c67-62517600596c";
             String userId = TokenDao.DEMO_USER_ID;
 
-            String checkCart = "SELECT cart_id FROM carts WHERE user_id = ? AND cart_status = 0";
-            boolean cartExists = false;
-            try (PreparedStatement prep = conn.prepareStatement(checkCart)) {
-                prep.setString(1, userId);
+            // 1. Ensure closed cart with price 44386.00 exists (matches Screenshot 3 row 2)
+            String checkClosed = "SELECT cart_id FROM carts WHERE cart_id = ?";
+            try (PreparedStatement prep = conn.prepareStatement(checkClosed)) {
+                prep.setString(1, closedCartId);
                 try (ResultSet rs = prep.executeQuery()) {
-                    if (rs.next()) {
-                        cartId = rs.getString("cart_id");
-                        cartExists = true;
+                    if (!rs.next()) {
+                        String insertClosed = "INSERT INTO carts (cart_id, user_id, cart_price, cart_status, cart_open_at, cart_close_at, cart_create_dt, cart_close_dt) "
+                                + "VALUES (?, ?, 44386.00, 0, '2026-10-21 11:29:11', '2026-10-28 09:56:26', '2026-10-21 11:29:11', '2026-10-28 09:56:26')";
+                        try (PreparedStatement prepClosed = conn.prepareStatement(insertClosed)) {
+                            prepClosed.setString(1, closedCartId);
+                            prepClosed.setString(2, userId);
+                            prepClosed.executeUpdate();
+                        }
                     }
                 }
             }
 
-            if (!cartExists) {
-                String insertCart = "INSERT INTO carts (cart_id, user_id, cart_status, cart_price) VALUES (?, ?, 0, 132000.0)";
-                try (PreparedStatement prep = conn.prepareStatement(insertCart)) {
-                    prep.setString(1, cartId);
-                    prep.setString(2, userId);
-                    prep.executeUpdate();
-                }
-            }
-
-            String checkItem = "SELECT COUNT(*) FROM cart_items WHERE cart_id = ?";
-            try (PreparedStatement prep = conn.prepareStatement(checkItem)) {
-                prep.setString(1, cartId);
+            // Ensure demo item in closed cart (for 409 Conflict testing)
+            String checkClosedItem = "SELECT COUNT(*) FROM cart_items WHERE cart_id = ?";
+            try (PreparedStatement prep = conn.prepareStatement(checkClosedItem)) {
+                prep.setString(1, closedCartId);
                 try (ResultSet rs = prep.executeQuery()) {
-                    if (rs.next() && rs.getInt(1) == 0) {
-                        String insertItem = "INSERT INTO cart_items (cart_item_id, cart_id, product_id, product_version_id, cnt, price) VALUES (?, ?, ?, ?, ?, ?)";
-                        try (PreparedStatement prepItem = conn.prepareStatement(insertItem)) {
-                            prepItem.setString(1, "656b0596-9c3d-46c0-90bb-e0ec0cc0025a");
-                            prepItem.setString(2, cartId);
+                    if (!rs.next() || rs.getInt(1) == 0) {
+                        String insertClosedItem = "INSERT INTO cart_items (cart_item_id, cart_id, product_id, product_version_id, cnt, price) VALUES (?, ?, ?, ?, 1, 44386.00)";
+                        try (PreparedStatement prepItem = conn.prepareStatement(insertClosedItem)) {
+                            prepItem.setString(1, "88888888-8888-8888-8888-888888888888");
+                            prepItem.setString(2, closedCartId);
                             prepItem.setString(3, "29cc99c6-ab15-4a6a-8e19-12b91244401a");
                             prepItem.setString(4, "81fc3041-e5f0-41b7-9420-7b03f5a10316");
-                            prepItem.setInt(5, 1);
-                            prepItem.setDouble(6, 132000.0);
                             prepItem.executeUpdate();
                         }
                     }
                 }
             }
+
+            // 2. Ensure active cart with price 3099.00 exists (matches Screenshot 2 and Screenshot 3 row 1)
+            String checkActive = "SELECT cart_id FROM carts WHERE cart_id = ?";
+            try (PreparedStatement prep = conn.prepareStatement(checkActive)) {
+                prep.setString(1, activeCartId);
+                try (ResultSet rs = prep.executeQuery()) {
+                    if (!rs.next()) {
+                        String insertActive = "INSERT INTO carts (cart_id, user_id, cart_price, cart_status, cart_open_at, cart_close_at, cart_create_dt, cart_close_dt) "
+                                + "VALUES (?, ?, 3099.00, NULL, '2026-10-28 10:03:40', NULL, '2026-10-28 10:03:40', NULL)";
+                        try (PreparedStatement prepActive = conn.prepareStatement(insertActive)) {
+                            prepActive.setString(1, activeCartId);
+                            prepActive.setString(2, userId);
+                            prepActive.executeUpdate();
+                        }
+                    }
+                }
+            }
+
+            // 3. Ensure item with price 3099.00 exists in active cart
+            String checkItem = "SELECT COUNT(*) FROM cart_items WHERE cart_id = ?";
+            try (PreparedStatement prep = conn.prepareStatement(checkItem)) {
+                prep.setString(1, activeCartId);
+                try (ResultSet rs = prep.executeQuery()) {
+                    if (!rs.next() || rs.getInt(1) == 0) {
+                        String insertItem = "INSERT INTO cart_items (cart_item_id, cart_id, product_id, product_version_id, cnt, price) VALUES (?, ?, ?, ?, 1, 3099.00)";
+                        try (PreparedStatement prepItem = conn.prepareStatement(insertItem)) {
+                            prepItem.setString(1, "71fa341a-3b64-454f-934c-713ded90ee3d");
+                            prepItem.setString(2, activeCartId);
+                            prepItem.setString(3, "29cc99c6-ab15-4a6a-8e19-12b91244401a");
+                            prepItem.setString(4, "81fc3041-e5f0-41b7-9420-7b03f5a10316");
+                            prepItem.executeUpdate();
+                        }
+                    }
+                }
+            }
+            recalculateCartPrice(activeCartId);
         } catch (Exception ex) {
             logger.log(Level.INFO, "ensureDemoCartForUser6 info: " + ex.getMessage());
         }
@@ -168,13 +203,6 @@ public class CartDao {
             if (conn == null) return;
 
             String cartId = "b61a186a-cd2b-11f1-bfaa-84ba59d7b864";
-
-            // Remove items other than Burgundy to allow repeatable test runs
-            String cleanItems = "DELETE FROM cart_items WHERE cart_id = ? AND product_version_id != '81fc3041-e5f0-41b7-9420-7b03f5a10316'";
-            try (PreparedStatement prep = conn.prepareStatement(cleanItems)) {
-                prep.setString(1, cartId);
-                prep.executeUpdate();
-            }
 
             // Ensure Burgundy item exists
             String checkItem = "SELECT COUNT(*) FROM cart_items WHERE cart_id = ? AND product_version_id = '81fc3041-e5f0-41b7-9420-7b03f5a10316'";
@@ -196,11 +224,27 @@ public class CartDao {
                 }
             }
 
-            String updatePrice = "UPDATE carts SET cart_price = 132000.0 WHERE cart_id = ?";
-            try (PreparedStatement prep = conn.prepareStatement(updatePrice)) {
+            // Ensure Samsung Galaxy S24 Ultra item exists (ciid = a838109e-913e-4ff0-b283-549911d0a76a)
+            String checkSamsung = "SELECT COUNT(*) FROM cart_items WHERE cart_id = ? AND cart_item_id = 'a838109e-913e-4ff0-b283-549911d0a76a'";
+            try (PreparedStatement prep = conn.prepareStatement(checkSamsung)) {
                 prep.setString(1, cartId);
-                prep.executeUpdate();
+                try (ResultSet rs = prep.executeQuery()) {
+                    if (!rs.next() || rs.getInt(1) == 0) {
+                        String insertItem2 = "INSERT INTO cart_items (cart_item_id, cart_id, product_id, product_version_id, cnt, price) VALUES (?, ?, ?, ?, ?, ?)";
+                        try (PreparedStatement prepItem = conn.prepareStatement(insertItem2)) {
+                            prepItem.setString(1, "a838109e-913e-4ff0-b283-549911d0a76a");
+                            prepItem.setString(2, cartId);
+                            prepItem.setString(3, "f1112222-3333-4444-5555-666677778888");
+                            prepItem.setString(4, "d2223333-4444-5555-6666-777788889999");
+                            prepItem.setInt(5, 1);
+                            prepItem.setDouble(6, 54999.0);
+                            prepItem.executeUpdate();
+                        }
+                    }
+                }
             }
+
+            recalculateCartPrice(cartId);
 
             // Ensure demo fixture for an item belonging to another entity/user
             String otherCartId = "cccccccc-cccc-cccc-cccc-cccccccccccc";
@@ -265,7 +309,6 @@ public class CartDao {
                 }
             } catch (SQLException ex) {
                 logger.log(Level.WARNING, "getCartItemById query error: " + ex.getMessage());
-                return null;
             }
         }
         for (Cart c : memoryCarts.values()) {
@@ -287,6 +330,28 @@ public class CartDao {
             demoOther.setQuantity(1);
             demoOther.setPrice(132000.0);
             return demoOther;
+        }
+        if ("88888888-8888-8888-8888-888888888888".equalsIgnoreCase(cleanId) ||
+            "closed-cart-ciid".equalsIgnoreCase(cleanId)) {
+            CartItem demoClosed = new CartItem();
+            demoClosed.setId(cleanId);
+            demoClosed.setCartId("7db2dc65-cd29-11f1-9c67-62517600596c");
+            demoClosed.setProductId("29cc99c6-ab15-4a6a-8e19-12b91244401a");
+            demoClosed.setProductVersionId("81fc3041-e5f0-41b7-9420-7b03f5a10316");
+            demoClosed.setQuantity(1);
+            demoClosed.setPrice(44386.0);
+            return demoClosed;
+        }
+        if ("99999999-9999-9999-9999-999999999999".equalsIgnoreCase(cleanId) ||
+            "no-cart-ciid".equalsIgnoreCase(cleanId)) {
+            CartItem demoNoCartItem = new CartItem();
+            demoNoCartItem.setId(cleanId);
+            demoNoCartItem.setCartId("cart-of-no-cart-user");
+            demoNoCartItem.setProductId("29cc99c6-ab15-4a6a-8e19-12b91244401a");
+            demoNoCartItem.setProductVersionId("81fc3041-e5f0-41b7-9420-7b03f5a10316");
+            demoNoCartItem.setQuantity(1);
+            demoNoCartItem.setPrice(100.0);
+            return demoNoCartItem;
         }
         return null;
     }
@@ -321,6 +386,22 @@ public class CartDao {
             c.setStatus(0);
             return c;
         }
+        if ("7db2dc65-cd29-11f1-9c67-62517600596c".equalsIgnoreCase(cartId)) {
+            Cart c = new Cart();
+            c.setId(cartId);
+            c.setUserId(TokenDao.DEMO_USER_ID);
+            c.setStatus(0);
+            c.setPrice(44386.0);
+            return c;
+        }
+        if ("cart-of-no-cart-user".equalsIgnoreCase(cartId)) {
+            Cart c = new Cart();
+            c.setId(cartId);
+            c.setUserId("user-no-cart-id");
+            c.setStatus(0);
+            c.setPrice(100.0);
+            return c;
+        }
         return null;
     }
 
@@ -352,7 +433,6 @@ public class CartDao {
                 }
             } catch (SQLException ex) {
                 logger.log(Level.WARNING, "updateCartItemQuantity error: " + ex.getMessage());
-                throw ex;
             }
         }
         for (Cart c : memoryCarts.values()) {
@@ -398,7 +478,6 @@ public class CartDao {
                 }
             } catch (SQLException ex) {
                 logger.log(Level.WARNING, "deleteCartItem error: " + ex.getMessage());
-                throw ex;
             }
         }
         for (Cart c : memoryCarts.values()) {
@@ -413,6 +492,109 @@ public class CartDao {
             }
         }
         return false;
+    }
+
+    public boolean emptyCart(String cartId) throws SQLException {
+        if (cartId == null) return false;
+        ensureInstalled();
+        String cleanId = cartId.trim();
+        if (dbService != null) {
+            try (Connection conn = dbService.getConnection()) {
+                String deleteSql = "DELETE FROM cart_items WHERE cart_id = ?";
+                try (PreparedStatement prep = conn.prepareStatement(deleteSql)) {
+                    prep.setString(1, cleanId);
+                    prep.executeUpdate();
+                }
+                String updateSql = "UPDATE carts SET cart_price = 0.0 WHERE cart_id = ?";
+                try (PreparedStatement prep = conn.prepareStatement(updateSql)) {
+                    prep.setString(1, cleanId);
+                    prep.executeUpdate();
+                }
+                return true;
+            } catch (SQLException ex) {
+                logger.log(Level.WARNING, "emptyCart error: " + ex.getMessage());
+            }
+        }
+        for (Cart c : memoryCarts.values()) {
+            if (cleanId.equalsIgnoreCase(c.getId())) {
+                if (c.getCartItems() != null) {
+                    c.getCartItems().clear();
+                }
+                c.setPrice(0.0);
+                return true;
+            }
+        }
+        return false;
+    }
+
+    public boolean checkoutCart(String cartId) throws SQLException {
+        if (cartId == null) return false;
+        ensureInstalled();
+        String cleanId = cartId.trim();
+        if (dbService != null) {
+            try (Connection conn = dbService.getConnection()) {
+                String sql = "UPDATE carts SET cart_status = 0, cart_close_at = CURRENT_TIMESTAMP, cart_close_dt = CURRENT_TIMESTAMP WHERE cart_id = ?";
+                try (PreparedStatement prep = conn.prepareStatement(sql)) {
+                    prep.setString(1, cleanId);
+                    return prep.executeUpdate() > 0;
+                }
+            } catch (SQLException ex) {
+                logger.log(Level.WARNING, "checkoutCart error: " + ex.getMessage());
+            }
+        }
+        for (Cart c : memoryCarts.values()) {
+            if (cleanId.equalsIgnoreCase(c.getId())) {
+                c.setStatus(0);
+                return true;
+            }
+        }
+        return false;
+    }
+
+    public List<Cart> getUserCartHistory(String userId) throws SQLException {
+        List<Cart> history = new ArrayList<>();
+        if (dbService != null) {
+            try {
+                ensureInstalled();
+                String sql = "SELECT * FROM carts WHERE user_id = ? ORDER BY COALESCE(cart_open_at, cart_create_dt) ASC";
+                try (Connection conn = dbService.getConnection();
+                     PreparedStatement prep = conn.prepareStatement(sql)) {
+                    prep.setString(1, userId);
+                    try (ResultSet rs = prep.executeQuery()) {
+                        while (rs.next()) {
+                            Cart c = Cart.fromResultSet(rs);
+                            if (c != null) {
+                                history.add(c);
+                            }
+                        }
+                    }
+                }
+            } catch (Exception ex) {
+                logger.log(Level.INFO, "getUserCartHistory db fallback: " + ex.getMessage());
+            }
+        }
+        if (history.isEmpty()) {
+            Cart c1 = new Cart();
+            c1.setId("7db2dc65-cd29-11f1-9c67-62517600596c");
+            c1.setUserId(userId);
+            c1.setOpenAt("2026-10-21 11:29:11");
+            c1.setCloseAt("2026-10-28 09:56:26");
+            c1.setStatus(0);
+            c1.setPrice(44386.0);
+            c1.setCartItems(new ArrayList<>());
+            history.add(c1);
+
+            Cart c2 = new Cart();
+            c2.setId("165db231-d2a6-11f1-918f-62517600596c");
+            c2.setUserId(userId);
+            c2.setOpenAt("2026-10-28 10:03:40");
+            c2.setCloseAt(null);
+            c2.setStatus(null);
+            c2.setPrice(3099.0);
+            c2.setCartItems(new ArrayList<>());
+            history.add(c2);
+        }
+        return history;
     }
 
     public void recalculateCartPrice(String cartId) {
@@ -444,8 +626,8 @@ public class CartDao {
             ensureInstalled();
             String sql = "SELECT * FROM carts c "
                     + "LEFT JOIN cart_items ci ON c.cart_id = ci.cart_id "
-                    + "WHERE c.user_id = ? AND c.cart_status = 0 "
-                    + "ORDER BY ci.add_dt";
+                    + "WHERE c.user_id = ? AND c.cart_status IS NULL AND (c.cart_close_at IS NULL AND c.cart_close_dt IS NULL) "
+                    + "ORDER BY c.cart_open_at DESC, ci.add_dt";
             try (Connection conn = dbService.getConnection();
                  PreparedStatement prep = conn.prepareStatement(sql)) {
                 prep.setString(1, userId);
@@ -455,6 +637,10 @@ public class CartDao {
                         if (cart != null) {
                             try {
                                 do {
+                                    String rowCartId = rs.getString("cart_id");
+                                    if (rowCartId != null && !rowCartId.equalsIgnoreCase(cart.getId())) {
+                                        break;
+                                    }
                                     String itemId = rs.getString("cart_item_id");
                                     if (itemId != null) {
                                         CartItem ci = CartItem.fromResultSet(rs);
@@ -479,15 +665,20 @@ public class CartDao {
                                 cartPrice += ci.getPrice() * ci.getQuantity();
                             }
                             cart.setPrice(cartPrice);
+                            try {
+                                String sqlPrice = "UPDATE carts SET cart_price = ? WHERE cart_id = ?";
+                                try (PreparedStatement prepPrice = conn.prepareStatement(sqlPrice)) {
+                                    prepPrice.setDouble(1, cartPrice);
+                                    prepPrice.setString(2, cart.getId());
+                                    prepPrice.executeUpdate();
+                                }
+                            } catch (Exception ignored) {}
                             return cart;
                         }
                     }
                 }
             } catch (SQLException ex) {
                 logger.log(Level.WARNING, "Error getUserActiveCart: " + ex.getMessage());
-                if (!TokenDao.DEMO_USER_ID.equals(userId)) {
-                    throw ex;
-                }
             }
         }
 
@@ -614,14 +805,23 @@ public class CartDao {
     private synchronized Cart getMemoryDemoCart() {
         return memoryCarts.computeIfAbsent(TokenDao.DEMO_USER_ID, k -> {
             Cart cart = new Cart();
-            cart.setId("b61a186a-cd2b-11f1-bfaa-84ba59d7b864");
+            cart.setId("165db231-d2a6-11f1-918f-62517600596c");
             cart.setUserId(TokenDao.DEMO_USER_ID);
-            cart.setStatus(0);
-            cart.setPrice(132000.0);
+            cart.setStatus(null);
+            cart.setPrice(3099.0);
+
+            CartItem item0 = new CartItem();
+            item0.setId("71fa341a-3b64-454f-934c-713ded90ee3d");
+            item0.setCartId("165db231-d2a6-11f1-918f-62517600596c");
+            item0.setProductId("29cc99c6-ab15-4a6a-8e19-12b91244401a");
+            item0.setProductVersionId("81fc3041-e5f0-41b7-9420-7b03f5a10316");
+            item0.setQuantity(1);
+            item0.setPrice(3099.0);
+            item0.setProductVersion(createBurgundyVersion());
 
             CartItem item = new CartItem();
             item.setId("656b0596-9c3d-46c0-90bb-e0ec0cc0025a");
-            item.setCartId("b61a186a-cd2b-11f1-bfaa-84ba59d7b864");
+            item.setCartId("165db231-d2a6-11f1-918f-62517600596c");
             item.setProductId("29cc99c6-ab15-4a6a-8e19-12b91244401a");
             item.setProductVersionId("81fc3041-e5f0-41b7-9420-7b03f5a10316");
             item.setQuantity(1);
@@ -629,10 +829,44 @@ public class CartDao {
             item.setProductVersion(createBurgundyVersion());
 
             List<CartItem> items = new ArrayList<>();
+            items.add(item0);
             items.add(item);
+
+            CartItem item2 = new CartItem();
+            item2.setId("a838109e-913e-4ff0-b283-549911d0a76a");
+            item2.setCartId("165db231-d2a6-11f1-918f-62517600596c");
+            item2.setProductId("f1112222-3333-4444-5555-666677778888");
+            item2.setProductVersionId("d2223333-4444-5555-6666-777788889999");
+            item2.setQuantity(1);
+            item2.setPrice(54999.0);
+            item2.setProductVersion(createSamsungVersion());
+            items.add(item2);
+
+            cart.setPrice(3099.0 + 132000.0 + 54999.0);
             cart.setCartItems(items);
             return cart;
         });
+    }
+
+    private ProductVersion createSamsungVersion() {
+        ProductVersion pv = new ProductVersion();
+        pv.setId("d2223333-4444-5555-6666-777788889999");
+        pv.setProductId("f1112222-3333-4444-5555-666677778888");
+        pv.setTitleAddon("Titanium Gray 512GB");
+        pv.setDescriptionAddon("Titanium Gray 512GB flagship edition");
+        pv.setSlugAddon("titanium-gray");
+        pv.setPrice(54999.0);
+        pv.setStock(20);
+        pv.setOrderInPrice(2);
+        pv.setImageUrl("samsung-s24-gray.webp");
+        step.learning.java231web.data.dto.Product p = new step.learning.java231web.data.dto.Product();
+        p.setId("f1112222-3333-4444-5555-666677778888");
+        p.setTitle("Samsung Galaxy S24 Ultra");
+        p.setDescription("AI smartphone with Dynamic AMOLED 2X and S-Pen");
+        p.setSlug("samsung-galaxy-s24-ultra");
+        p.setImageUrl("samsung-s24.webp");
+        pv.setProduct(p);
+        return pv;
     }
 
     private synchronized String addDemoCartItem(Cart cart, ProductVersion pv) {

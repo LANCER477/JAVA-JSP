@@ -1,0 +1,23 @@
+$kind: http-request
+description: "Перевірка 1: Переконатись, що CartItem взагалі існує у БД (повертає 404 Not Found)"
+url: "{{host}}/cart?ciid={{ciid_wrong}}"
+method: DELETE
+headers:
+  Authorization: Bearer {{user6}}
+queryParams:
+  - key: ciid
+    value: "{{ciid_wrong}}"
+    description: ID неіснуючого товару
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test('Status code is 404 Not Found', function () {
+          pm.response.to.have.status(404);
+      });
+      pm.test('Response indicates cart item not found', function () {
+          var jsonData = pm.response.json();
+          pm.expect(jsonData.status.code).to.eql(404);
+          pm.expect(jsonData.data).to.include('Cart item not found');
+      });
+    language: text/javascript
+order: 1000

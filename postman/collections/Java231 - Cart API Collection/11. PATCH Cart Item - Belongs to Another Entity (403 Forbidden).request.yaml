@@ -1,15 +1,16 @@
 $kind: http-request
 description: "Перевірка ДЗ: ciid існує в БД, але належить іншому кошику / іншій сутності (403 Forbidden)"
-url: "{{host}}/cart?ciid=77777777-7777-7777-7777-777777777777&delta=1"
+url: "{{host}}/cart?ciid={{ciid_other}}&delta=1"
 method: PATCH
 headers:
   Authorization: Bearer {{user6}}
 queryParams:
   - key: ciid
-    value: 77777777-7777-7777-7777-777777777777
-    description: ID позиції, що існує в БД, але належить іншій сутності / іншому кошику
+    value: "{{ciid_other}}"
+    description: ID позиції, що існує в БД, але належить іншій сутності (змінна {{ciid_other}})
   - key: delta
     value: "1"
+    description: Зміна кількості (+1)
 scripts:
   - type: afterResponse
     code: |-

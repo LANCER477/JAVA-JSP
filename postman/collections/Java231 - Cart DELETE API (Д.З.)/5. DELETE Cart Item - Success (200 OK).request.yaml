@@ -1,0 +1,24 @@
+$kind: http-request
+description: "Успішне проходження усіх 4 перевірок: видалення товару з активного кошика (повертає 200 OK)"
+url: "{{host}}/cart?ciid={{ciid}}"
+method: DELETE
+headers:
+  Authorization: Bearer {{user6}}
+queryParams:
+  - key: ciid
+    value: "{{ciid}}"
+    description: ID активного товару у відкритому кошику
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test('Status code is 200 OK', function () {
+          pm.response.to.have.status(200);
+      });
+      pm.test('Cart item removed and updated cart returned', function () {
+          var jsonData = pm.response.json();
+          pm.expect(jsonData.status.code).to.eql(200);
+          pm.expect(jsonData.data).to.have.property('cartItems');
+          pm.expect(jsonData.data).to.have.property('price');
+      });
+    language: text/javascript
+order: 5000

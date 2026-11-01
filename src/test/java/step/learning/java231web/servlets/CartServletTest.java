@@ -124,7 +124,16 @@ public class CartServletTest {
         assertEquals(200, statusCode.get());
 
         String result = stringWriter.toString().trim();
-        Cart cart = gson.fromJson(result, Cart.class);
+        Cart cart = null;
+        try {
+            RestResponse restResponse = gson.fromJson(result, RestResponse.class);
+            if (restResponse != null && restResponse.getData() != null) {
+                cart = gson.fromJson(gson.toJson(restResponse.getData()), Cart.class);
+            }
+        } catch (Exception ignored) {}
+        if (cart == null) {
+            cart = gson.fromJson(result, Cart.class);
+        }
 
         assertNotNull(cart);
         assertNotNull(cart.getCartItems());
@@ -653,5 +662,489 @@ public class CartServletTest {
         RestResponse resp = new Gson().fromJson(stringWriter.toString(), RestResponse.class);
         assertNotNull(resp);
         assertEquals(200, resp.getStatus().getCode());
+    }
+
+    @Test
+    public void testPatchCartExceededStockLimitReturns200WithStockMessage() throws Exception {
+        CartDao fakeCartDao = new CartDao(null);
+        TokenDao fakeTokenDao = new TokenDao(null);
+        Gson gson = new GsonBuilder().serializeNulls().create();
+        CartServlet servlet = new CartServlet(fakeCartDao, fakeTokenDao, gson);
+
+        StringWriter stringWriter = new StringWriter();
+        PrintWriter printWriter = new PrintWriter(stringWriter);
+        AtomicInteger statusCode = new AtomicInteger(0);
+
+        // Burgundy item stock is 25. Quantity is 1. inc=30 exceeds stock limit.
+        HttpServletRequest request = (HttpServletRequest) Proxy.newProxyInstance(
+                HttpServletRequest.class.getClassLoader(),
+                new Class<?>[]{HttpServletRequest.class},
+                (proxy, method, args) -> {
+                    if ("getMethod".equals(method.getName())) return "PATCH";
+                    if ("getHeader".equals(method.getName()) && "Authorization".equalsIgnoreCase((String) args[0])) {
+                        return "Bearer " + TokenDao.DEMO_TOKEN_ID;
+                    }
+                    if ("getParameter".equals(method.getName()) && "ciid".equals(args[0])) {
+                        return "656b0596-9c3d-46c0-90bb-e0ec0cc0025a";
+                    }
+                    if ("getParameter".equals(method.getName()) && "inc".equals(args[0])) {
+                        return "30";
+                    }
+                    if ("getWriter".equals(method.getName())) return printWriter;
+                    return null;
+                }
+        );
+        HttpServletResponse response = (HttpServletResponse) Proxy.newProxyInstance(
+                HttpServletResponse.class.getClassLoader(),
+                new Class<?>[]{HttpServletResponse.class},
+                (proxy, method, args) -> {
+                    if ("setStatus".equals(method.getName()) && args != null && args.length > 0) {
+                        statusCode.set((Integer) args[0]);
+                    }
+                    if ("getWriter".equals(method.getName())) return printWriter;
+                    return null;
+                }
+        );
+
+        servlet.service(request, response);
+        assertEquals(200, statusCode.get());
+        RestResponse resp = new Gson().fromJson(stringWriter.toString(), RestResponse.class);
+        assertNotNull(resp);
+        assertEquals(200, resp.getStatus().getCode());
+        assertEquals("'inc' exceeded stock limit", resp.getData());
+        assertEquals("string", resp.getMeta().getDataType());
+    }
+
+    @Test
+    public void testPatchCartCausesZeroQuantityReturnsMessage() throws Exception {
+        CartDao fakeCartDao = new CartDao(null);
+        TokenDao fakeTokenDao = new TokenDao(null);
+        Gson gson = new GsonBuilder().serializeNulls().create();
+        CartServlet servlet = new CartServlet(fakeCartDao, fakeTokenDao, gson);
+
+        Cart active = fakeCartDao.getUserActiveCart(TokenDao.DEMO_USER_ID);
+        int currentQty = active != null && !active.getCartItems().isEmpty() ? active.getCartItems().get(0).getQuantity() : 1;
+
+        StringWriter stringWriter = new StringWriter();
+        PrintWriter printWriter = new PrintWriter(stringWriter);
+        AtomicInteger statusCode = new AtomicInteger(0);
+
+        HttpServletRequest request = (HttpServletRequest) Proxy.newProxyInstance(
+                HttpServletRequest.class.getClassLoader(),
+                new Class<?>[]{HttpServletRequest.class},
+                (proxy, method, args) -> {
+                    if ("getMethod".equals(method.getName())) return "PATCH";
+                    if ("getHeader".equals(method.getName()) && "Authorization".equalsIgnoreCase((String) args[0])) {
+                        return "Bearer " + TokenDao.DEMO_TOKEN_ID;
+                    }
+                    if ("getParameter".equals(method.getName()) && "ciid".equals(args[0])) {
+                        return "656b0596-9c3d-46c0-90bb-e0ec0cc0025a";
+                    }
+                    if ("getParameter".equals(method.getName()) && "inc".equals(args[0])) {
+                        return String.valueOf(-currentQty);
+                    }
+                    if ("getWriter".equals(method.getName())) return printWriter;
+                    return null;
+                }
+        );
+        HttpServletResponse response = (HttpServletResponse) Proxy.newProxyInstance(
+                HttpServletResponse.class.getClassLoader(),
+                new Class<?>[]{HttpServletResponse.class},
+                (proxy, method, args) -> {
+                    if ("setStatus".equals(method.getName()) && args != null && args.length > 0) {
+                        statusCode.set((Integer) args[0]);
+                    }
+                    if ("getWriter".equals(method.getName())) return printWriter;
+                    return null;
+                }
+        );
+
+        servlet.service(request, response);
+        assertEquals(200, statusCode.get());
+        RestResponse resp = new Gson().fromJson(stringWriter.toString(), RestResponse.class);
+        assertNotNull(resp);
+        assertEquals(200, resp.getStatus().getCode());
+        assertEquals("'inc' causes zero quantity. For deletion use DELETE request", resp.getData());
+    }
+
+    @Test
+    public void testPatchCartCausesNegativeQuantityReturnsMessage() throws Exception {
+        CartDao fakeCartDao = new CartDao(null);
+        TokenDao fakeTokenDao = new TokenDao(null);
+        Gson gson = new GsonBuilder().serializeNulls().create();
+        CartServlet servlet = new CartServlet(fakeCartDao, fakeTokenDao, gson);
+
+        Cart active = fakeCartDao.getUserActiveCart(TokenDao.DEMO_USER_ID);
+        int currentQty = active != null && !active.getCartItems().isEmpty() ? active.getCartItems().get(0).getQuantity() : 1;
+
+        StringWriter stringWriter = new StringWriter();
+        PrintWriter printWriter = new PrintWriter(stringWriter);
+        AtomicInteger statusCode = new AtomicInteger(0);
+
+        HttpServletRequest request = (HttpServletRequest) Proxy.newProxyInstance(
+                HttpServletRequest.class.getClassLoader(),
+                new Class<?>[]{HttpServletRequest.class},
+                (proxy, method, args) -> {
+                    if ("getMethod".equals(method.getName())) return "PATCH";
+                    if ("getHeader".equals(method.getName()) && "Authorization".equalsIgnoreCase((String) args[0])) {
+                        return "Bearer " + TokenDao.DEMO_TOKEN_ID;
+                    }
+                    if ("getParameter".equals(method.getName()) && "ciid".equals(args[0])) {
+                        return "656b0596-9c3d-46c0-90bb-e0ec0cc0025a";
+                    }
+                    if ("getParameter".equals(method.getName()) && "inc".equals(args[0])) {
+                        return String.valueOf(-currentQty - 5);
+                    }
+                    if ("getWriter".equals(method.getName())) return printWriter;
+                    return null;
+                }
+        );
+        HttpServletResponse response = (HttpServletResponse) Proxy.newProxyInstance(
+                HttpServletResponse.class.getClassLoader(),
+                new Class<?>[]{HttpServletResponse.class},
+                (proxy, method, args) -> {
+                    if ("setStatus".equals(method.getName()) && args != null && args.length > 0) {
+                        statusCode.set((Integer) args[0]);
+                    }
+                    if ("getWriter".equals(method.getName())) return printWriter;
+                    return null;
+                }
+        );
+
+        servlet.service(request, response);
+        assertEquals(200, statusCode.get());
+        RestResponse resp = new Gson().fromJson(stringWriter.toString(), RestResponse.class);
+        assertNotNull(resp);
+        assertEquals(200, resp.getStatus().getCode());
+        assertEquals("'inc' causes negative quantity", resp.getData());
+    }
+
+    @Test
+    public void testDeleteCartItemSuccess() throws Exception {
+        CartDao fakeCartDao = new CartDao(null);
+        TokenDao fakeTokenDao = new TokenDao(null);
+        Gson gson = new GsonBuilder().serializeNulls().create();
+        CartServlet servlet = new CartServlet(fakeCartDao, fakeTokenDao, gson);
+
+        fakeCartDao.resetDemoCartForUser6();
+        try {
+            Cart active = fakeCartDao.getUserActiveCart(TokenDao.DEMO_USER_ID);
+            assertNotNull(active);
+            assertFalse(active.getCartItems().isEmpty());
+            String itemToDelete = active.getCartItems().get(0).getId();
+
+            StringWriter stringWriter = new StringWriter();
+            PrintWriter printWriter = new PrintWriter(stringWriter);
+            AtomicInteger statusCode = new AtomicInteger(200);
+
+            HttpServletRequest request = (HttpServletRequest) Proxy.newProxyInstance(
+                    HttpServletRequest.class.getClassLoader(),
+                    new Class<?>[]{HttpServletRequest.class},
+                    (proxy, method, args) -> {
+                        if ("getMethod".equals(method.getName())) return "DELETE";
+                        if ("getHeader".equals(method.getName()) && "Authorization".equals(args[0])) {
+                            return "Bearer " + TokenDao.DEMO_TOKEN_ID;
+                        }
+                        if ("getParameter".equals(method.getName()) && "ciid".equals(args[0])) {
+                            return itemToDelete;
+                        }
+                        if ("getWriter".equals(method.getName())) return printWriter;
+                        return null;
+                    }
+            );
+            HttpServletResponse response = (HttpServletResponse) Proxy.newProxyInstance(
+                    HttpServletResponse.class.getClassLoader(),
+                    new Class<?>[]{HttpServletResponse.class},
+                    (proxy, method, args) -> {
+                        if ("setStatus".equals(method.getName()) && args != null && args.length > 0) {
+                            statusCode.set((Integer) args[0]);
+                        }
+                        if ("getWriter".equals(method.getName())) return printWriter;
+                        return null;
+                    }
+            );
+
+            servlet.service(request, response);
+            assertEquals(200, statusCode.get());
+            RestResponse resp = new Gson().fromJson(stringWriter.toString(), RestResponse.class);
+            assertNotNull(resp);
+            assertEquals(200, resp.getStatus().getCode());
+            assertNotNull(resp.getMeta());
+            assertTrue(resp.getMeta().getServiceName().contains("Drop Cart Item"));
+        } finally {
+            fakeCartDao.resetDemoCartForUser6();
+        }
+    }
+
+    @Test
+    public void testDeleteCartItemNotFoundReturns404() throws Exception {
+        CartDao fakeCartDao = new CartDao(null);
+        TokenDao fakeTokenDao = new TokenDao(null);
+        Gson gson = new GsonBuilder().serializeNulls().create();
+        CartServlet servlet = new CartServlet(fakeCartDao, fakeTokenDao, gson);
+
+        StringWriter stringWriter = new StringWriter();
+        PrintWriter printWriter = new PrintWriter(stringWriter);
+        AtomicInteger statusCode = new AtomicInteger(200);
+
+        HttpServletRequest request = (HttpServletRequest) Proxy.newProxyInstance(
+                HttpServletRequest.class.getClassLoader(),
+                new Class<?>[]{HttpServletRequest.class},
+                (proxy, method, args) -> {
+                    if ("getMethod".equals(method.getName())) return "DELETE";
+                    if ("getHeader".equals(method.getName()) && "Authorization".equals(args[0])) {
+                        return "Bearer " + TokenDao.DEMO_TOKEN_ID;
+                    }
+                    if ("getParameter".equals(method.getName()) && "ciid".equals(args[0])) {
+                        return "non-existing-ciid-12345";
+                    }
+                    if ("getWriter".equals(method.getName())) return printWriter;
+                    return null;
+                }
+        );
+        HttpServletResponse response = (HttpServletResponse) Proxy.newProxyInstance(
+                HttpServletResponse.class.getClassLoader(),
+                new Class<?>[]{HttpServletResponse.class},
+                (proxy, method, args) -> {
+                    if ("setStatus".equals(method.getName()) && args != null && args.length > 0) {
+                        statusCode.set((Integer) args[0]);
+                    }
+                    if ("getWriter".equals(method.getName())) return printWriter;
+                    return null;
+                }
+        );
+
+        servlet.service(request, response);
+        assertEquals(404, statusCode.get());
+        RestResponse resp = new Gson().fromJson(stringWriter.toString(), RestResponse.class);
+        assertNotNull(resp);
+        assertEquals(404, resp.getStatus().getCode());
+        assertEquals("Cart item not found", resp.getData());
+    }
+
+    @Test
+    public void testDeleteCartItemOtherEntityReturns403() throws Exception {
+        CartDao fakeCartDao = new CartDao(null);
+        TokenDao fakeTokenDao = new TokenDao(null);
+        Gson gson = new GsonBuilder().serializeNulls().create();
+        CartServlet servlet = new CartServlet(fakeCartDao, fakeTokenDao, gson);
+
+        StringWriter stringWriter = new StringWriter();
+        PrintWriter printWriter = new PrintWriter(stringWriter);
+        AtomicInteger statusCode = new AtomicInteger(200);
+
+        HttpServletRequest request = (HttpServletRequest) Proxy.newProxyInstance(
+                HttpServletRequest.class.getClassLoader(),
+                new Class<?>[]{HttpServletRequest.class},
+                (proxy, method, args) -> {
+                    if ("getMethod".equals(method.getName())) return "DELETE";
+                    if ("getHeader".equals(method.getName()) && "Authorization".equals(args[0])) {
+                        return "Bearer " + TokenDao.DEMO_TOKEN_ID;
+                    }
+                    if ("getParameter".equals(method.getName()) && "ciid".equals(args[0])) {
+                        return "77777777-7777-7777-7777-777777777777"; // other entity
+                    }
+                    if ("getWriter".equals(method.getName())) return printWriter;
+                    return null;
+                }
+        );
+        HttpServletResponse response = (HttpServletResponse) Proxy.newProxyInstance(
+                HttpServletResponse.class.getClassLoader(),
+                new Class<?>[]{HttpServletResponse.class},
+                (proxy, method, args) -> {
+                    if ("setStatus".equals(method.getName()) && args != null && args.length > 0) {
+                        statusCode.set((Integer) args[0]);
+                    }
+                    if ("getWriter".equals(method.getName())) return printWriter;
+                    return null;
+                }
+        );
+
+        servlet.service(request, response);
+        assertEquals(403, statusCode.get());
+        RestResponse resp = new Gson().fromJson(stringWriter.toString(), RestResponse.class);
+        assertNotNull(resp);
+        assertEquals(403, resp.getStatus().getCode());
+        assertEquals("Cart item belongs to another entity", resp.getData());
+    }
+
+    @Test
+    public void testDeleteCartUnauthorizedReturns401() throws Exception {
+        CartDao fakeCartDao = new CartDao(null);
+        TokenDao fakeTokenDao = new TokenDao(null);
+        Gson gson = new GsonBuilder().serializeNulls().create();
+        CartServlet servlet = new CartServlet(fakeCartDao, fakeTokenDao, gson);
+
+        StringWriter stringWriter = new StringWriter();
+        PrintWriter printWriter = new PrintWriter(stringWriter);
+        AtomicInteger statusCode = new AtomicInteger(200);
+
+        HttpServletRequest request = (HttpServletRequest) Proxy.newProxyInstance(
+                HttpServletRequest.class.getClassLoader(),
+                new Class<?>[]{HttpServletRequest.class},
+                (proxy, method, args) -> {
+                    if ("getMethod".equals(method.getName())) return "DELETE";
+                    if ("getWriter".equals(method.getName())) return printWriter;
+                    return null;
+                }
+        );
+        HttpServletResponse response = (HttpServletResponse) Proxy.newProxyInstance(
+                HttpServletResponse.class.getClassLoader(),
+                new Class<?>[]{HttpServletResponse.class},
+                (proxy, method, args) -> {
+                    if ("setStatus".equals(method.getName()) && args != null && args.length > 0) {
+                        statusCode.set((Integer) args[0]);
+                    }
+                    if ("getWriter".equals(method.getName())) return printWriter;
+                    return null;
+                }
+        );
+
+        servlet.service(request, response);
+        assertEquals(401, statusCode.get());
+    }
+
+    @Test
+    public void testCartHistoryReturnsArray() throws Exception {
+        CartDao fakeCartDao = new CartDao(null);
+        TokenDao fakeTokenDao = new TokenDao(null);
+        Gson gson = new GsonBuilder().serializeNulls().create();
+        CartServlet servlet = new CartServlet(fakeCartDao, fakeTokenDao, gson);
+
+        StringWriter stringWriter = new StringWriter();
+        PrintWriter printWriter = new PrintWriter(stringWriter);
+        AtomicInteger statusCode = new AtomicInteger(200);
+
+        HttpServletRequest request = (HttpServletRequest) Proxy.newProxyInstance(
+                HttpServletRequest.class.getClassLoader(),
+                new Class<?>[]{HttpServletRequest.class},
+                (proxy, method, args) -> {
+                    if ("getMethod".equals(method.getName())) return "GET";
+                    if ("getPathInfo".equals(method.getName())) return "/history";
+                    if ("getHeader".equals(method.getName()) && "Authorization".equals(args[0])) {
+                        return "Bearer " + TokenDao.DEMO_TOKEN_ID;
+                    }
+                    if ("getWriter".equals(method.getName())) return printWriter;
+                    return null;
+                }
+        );
+        HttpServletResponse response = (HttpServletResponse) Proxy.newProxyInstance(
+                HttpServletResponse.class.getClassLoader(),
+                new Class<?>[]{HttpServletResponse.class},
+                (proxy, method, args) -> {
+                    if ("setStatus".equals(method.getName()) && args != null && args.length > 0) {
+                        statusCode.set((Integer) args[0]);
+                    }
+                    if ("getWriter".equals(method.getName())) return printWriter;
+                    return null;
+                }
+        );
+
+        servlet.service(request, response);
+        assertEquals(200, statusCode.get());
+        RestResponse resp = new Gson().fromJson(stringWriter.toString(), RestResponse.class);
+        assertNotNull(resp);
+        assertEquals(200, resp.getStatus().getCode());
+        assertNotNull(resp.getMeta());
+        assertEquals("array", resp.getMeta().getDataType());
+        assertNotNull(resp.getData());
+        assertTrue(resp.getData() instanceof java.util.List);
+    }
+
+    @Test
+    public void testDeleteCartItemBelongsToClosedCartReturns409() throws Exception {
+        CartDao fakeCartDao = new CartDao(null);
+        TokenDao fakeTokenDao = new TokenDao(null);
+        Gson gson = new GsonBuilder().serializeNulls().create();
+        CartServlet servlet = new CartServlet(fakeCartDao, fakeTokenDao, gson);
+
+        StringWriter stringWriter = new StringWriter();
+        PrintWriter printWriter = new PrintWriter(stringWriter);
+        AtomicInteger statusCode = new AtomicInteger(200);
+
+        HttpServletRequest request = (HttpServletRequest) Proxy.newProxyInstance(
+                HttpServletRequest.class.getClassLoader(),
+                new Class<?>[]{HttpServletRequest.class},
+                (proxy, method, args) -> {
+                    if ("getMethod".equals(method.getName())) return "DELETE";
+                    if ("getHeader".equals(method.getName()) && "Authorization".equals(args[0])) {
+                        return "Bearer " + TokenDao.DEMO_TOKEN_ID;
+                    }
+                    if ("getParameter".equals(method.getName()) && "ciid".equals(args[0])) {
+                        return "88888888-8888-8888-8888-888888888888"; // closed cart item of demo user
+                    }
+                    if ("getWriter".equals(method.getName())) return printWriter;
+                    return null;
+                }
+        );
+        HttpServletResponse response = (HttpServletResponse) Proxy.newProxyInstance(
+                HttpServletResponse.class.getClassLoader(),
+                new Class<?>[]{HttpServletResponse.class},
+                (proxy, method, args) -> {
+                    if ("setStatus".equals(method.getName()) && args != null && args.length > 0) {
+                        statusCode.set((Integer) args[0]);
+                    }
+                    if ("getWriter".equals(method.getName())) return printWriter;
+                    return null;
+                }
+        );
+
+        servlet.service(request, response);
+        assertEquals(409, statusCode.get());
+        RestResponse resp = new Gson().fromJson(stringWriter.toString(), RestResponse.class);
+        assertNotNull(resp);
+        assertEquals(409, resp.getStatus().getCode());
+        assertTrue(resp.getData().toString().contains("closed"));
+    }
+
+    @Test
+    public void testDeleteCartItemUserHasNoOpenCartReturns422() throws Exception {
+        CartDao fakeCartDao = new CartDao(null) {
+            @Override
+            public Cart getUserActiveCart(String userId) {
+                return null; // Simulate no active cart
+            }
+        };
+        TokenDao fakeTokenDao = new TokenDao(null);
+        Gson gson = new GsonBuilder().serializeNulls().create();
+        CartServlet servlet = new CartServlet(fakeCartDao, fakeTokenDao, gson);
+
+        StringWriter stringWriter = new StringWriter();
+        PrintWriter printWriter = new PrintWriter(stringWriter);
+        AtomicInteger statusCode = new AtomicInteger(200);
+
+        HttpServletRequest request = (HttpServletRequest) Proxy.newProxyInstance(
+                HttpServletRequest.class.getClassLoader(),
+                new Class<?>[]{HttpServletRequest.class},
+                (proxy, method, args) -> {
+                    if ("getMethod".equals(method.getName())) return "DELETE";
+                    if ("getHeader".equals(method.getName()) && "Authorization".equals(args[0])) {
+                        return "Bearer " + TokenDao.DEMO_TOKEN_ID;
+                    }
+                    if ("getParameter".equals(method.getName()) && "ciid".equals(args[0])) {
+                        return "88888888-8888-8888-8888-888888888888"; // owned by demo user
+                    }
+                    if ("getWriter".equals(method.getName())) return printWriter;
+                    return null;
+                }
+        );
+        HttpServletResponse response = (HttpServletResponse) Proxy.newProxyInstance(
+                HttpServletResponse.class.getClassLoader(),
+                new Class<?>[]{HttpServletResponse.class},
+                (proxy, method, args) -> {
+                    if ("setStatus".equals(method.getName()) && args != null && args.length > 0) {
+                        statusCode.set((Integer) args[0]);
+                    }
+                    if ("getWriter".equals(method.getName())) return printWriter;
+                    return null;
+                }
+        );
+
+        servlet.service(request, response);
+        assertEquals(422, statusCode.get());
+        RestResponse resp = new Gson().fromJson(stringWriter.toString(), RestResponse.class);
+        assertNotNull(resp);
+        assertEquals(422, resp.getStatus().getCode());
+        assertTrue(resp.getData().toString().contains("no open cart"));
     }
 }

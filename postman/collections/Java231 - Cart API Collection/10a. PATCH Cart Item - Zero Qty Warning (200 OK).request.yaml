@@ -1,0 +1,27 @@
+$kind: http-request
+description: Граничний випадок - обнулення кількості товару (200 OK, попередження використовувати DELETE)
+url: "{{host}}/cart?ciid={{ciid}}&delta=-1"
+method: PATCH
+headers:
+  Authorization: Bearer {{user6}}
+queryParams:
+  - key: ciid
+    value: "{{ciid}}"
+    description: ID позиції у власному кошику (змінна {{ciid}})
+  - key: delta
+    value: "-1"
+    description: Зміна кількості до 0
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test('Status code is 200 OK', function () {
+          pm.response.to.have.status(200);
+      });
+      pm.test('Response warns that for deletion use DELETE request', function () {
+          var jsonData = pm.response.json();
+          pm.expect(jsonData.status.code).to.eql(200);
+          pm.expect(jsonData.data).to.include('zero quantity. For deletion use DELETE request');
+      });
+    language: text/javascript
+order: 10100
+

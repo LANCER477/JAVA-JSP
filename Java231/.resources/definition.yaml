@@ -1,2 +1,9 @@
 $kind: collection
 description: Коллекция запросов Java231 Cart для Postman
+variables:
+  host: http://localhost:8080/java231web
+  user2: 024ad494-bafd-11f1-9d1a-84ba59d7b864
+  user6: 024ad494-bafd-11f1-9d1a-84ba59d7b864
+  ciid: 71fa341a-3b64-454f-934c-713ded90ee3d
+  ciid_other: 77777777-7777-7777-7777-777777777777
+  ciid_wrong: 00000000-0000-0000-0000-000000000000

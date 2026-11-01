@@ -1,0 +1,7 @@
+$kind: http-request
+url: "{{host}}/cart"
+method: DELETE
+headers:
+  Authorization: Bearer {{user2}}
+order: 8000
+

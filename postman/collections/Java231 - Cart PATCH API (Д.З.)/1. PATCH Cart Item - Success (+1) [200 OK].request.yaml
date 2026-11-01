@@ -1,0 +1,27 @@
+$kind: http-request
+description: Успішне збільшення кількості товару в кошику (+1). Повертає 200 OK та оновлену корзину.
+url: "{{host}}/cart?ciid={{ciid}}&delta=1"
+method: PATCH
+headers:
+  Authorization: Bearer {{user6}}
+queryParams:
+  - key: ciid
+    value: "{{ciid}}"
+    description: Змінна {{ciid}} для позиції у кошику
+  - key: delta
+    value: "1"
+    description: Збільшення кількості на 1
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test('Status code is 200 OK', function () {
+          pm.response.to.have.status(200);
+      });
+      pm.test('Cart item quantity incremented successfully', function () {
+          var jsonData = pm.response.json();
+          pm.expect(jsonData.status.code).to.eql(200);
+          pm.expect(jsonData.data).to.have.property('cartItems');
+          pm.expect(jsonData.data).to.have.property('price');
+      });
+    language: text/javascript
+order: 2000

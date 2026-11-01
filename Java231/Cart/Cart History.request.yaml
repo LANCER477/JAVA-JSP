@@ -1,0 +1,7 @@
+$kind: http-request
+url: "{{host}}/cart/history"
+method: GET
+headers:
+  Authorization: Bearer {{user2}}
+order: 1500
+

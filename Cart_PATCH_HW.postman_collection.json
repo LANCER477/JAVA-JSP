@@ -1,0 +1,556 @@
+{
+  "info": {
+    "_postman_id": "a1b2c3d4-e5f6-4789-abcd-ef0123456789",
+    "name": "Java231 - Cart PATCH API (Д.З.)",
+    "description": "Колекція Postman для домашнього завдання: повна перевірка усіх статусів відповідей сервісу PATCH /cart з використанням централізованої змінної {{ciid}} для одночасної зміни у всіх запитах.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "host",
+      "value": "http://localhost:8080/java231web",
+      "type": "string"
+    },
+    {
+      "key": "user6",
+      "value": "024ad494-bafd-11f1-9d1a-84ba59d7b864",
+      "type": "string"
+    },
+    {
+      "key": "ciid",
+      "value": "71fa341a-3b64-454f-934c-713ded90ee3d",
+      "type": "string",
+      "description": "Централізована змінна ID позиції кошика для усіх запитів"
+    },
+    {
+      "key": "ciid_other",
+      "value": "77777777-7777-7777-7777-777777777777",
+      "type": "string",
+      "description": "ID позиції, що належить іншому кошику / користувачу (для 403 Forbidden)"
+    },
+    {
+      "key": "ciid_wrong",
+      "value": "00000000-0000-0000-0000-000000000000",
+      "type": "string",
+      "description": "ID позиції, якої немає в базі даних (для 404 Not Found)"
+    }
+  ],
+  "item": [
+    {
+      "name": "0. GET Active Cart (Отримати ciid активного кошика)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status code is 200 OK', function () {",
+              "    pm.response.to.have.status(200);",
+              "});",
+              "pm.test('Cart has items and sets ciid variable if present', function () {",
+              "    var jsonData = pm.response.json();",
+              "    pm.expect(jsonData.status.code).to.eql(200);",
+              "    if (jsonData.data && jsonData.data.cartItems && jsonData.data.cartItems.length > 0) {",
+              "        var firstId = jsonData.data.cartItems[0].id;",
+              "        pm.collectionVariables.set('ciid', firstId);",
+              "        if (pm.environment) {",
+              "            pm.environment.set('ciid', firstId);",
+              "        }",
+              "        console.log('Centralized ciid updated to: ' + firstId);",
+              "    }",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{user6}}",
+            "type": "text"
+          }
+        ],
+        "url": {
+          "raw": "{{host}}/cart",
+          "host": [
+            "{{host}}"
+          ],
+          "path": [
+            "cart"
+          ]
+        },
+        "description": "Отримання активного кошика та автоматичне оновлення змінної {{ciid}} першим знайденим товаром"
+      },
+      "response": []
+    },
+    {
+      "name": "1. PATCH Cart Item - Success (+1) [200 OK]",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status code is 200 OK', function () {",
+              "    pm.response.to.have.status(200);",
+              "});",
+              "pm.test('Cart item quantity incremented successfully', function () {",
+              "    var jsonData = pm.response.json();",
+              "    pm.expect(jsonData.status.code).to.eql(200);",
+              "    pm.expect(jsonData.data).to.have.property('cartItems');",
+              "    pm.expect(jsonData.data).to.have.property('price');",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "PATCH",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{user6}}",
+            "type": "text"
+          }
+        ],
+        "url": {
+          "raw": "{{host}}/cart?ciid={{ciid}}&delta=1",
+          "host": [
+            "{{host}}"
+          ],
+          "path": [
+            "cart"
+          ],
+          "query": [
+            {
+              "key": "ciid",
+              "value": "{{ciid}}",
+              "description": "Змінна {{ciid}} для позиції у кошику"
+            },
+            {
+              "key": "delta",
+              "value": "1",
+              "description": "Збільшення кількості на 1"
+            }
+          ]
+        },
+        "description": "Успішне збільшення кількості товару в кошику (+1). Повертає 200 OK та оновлену корзину."
+      },
+      "response": []
+    },
+    {
+      "name": "2. PATCH Cart Item - Zero Qty Warning [200 OK]",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status code is 200 OK', function () {",
+              "    pm.response.to.have.status(200);",
+              "});",
+              "pm.test('Response advises using DELETE for removing item', function () {",
+              "    var jsonData = pm.response.json();",
+              "    pm.expect(jsonData.status.code).to.eql(200);",
+              "    pm.expect(jsonData.data).to.include('zero quantity. For deletion use DELETE request');",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "PATCH",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{user6}}",
+            "type": "text"
+          }
+        ],
+        "url": {
+          "raw": "{{host}}/cart?ciid={{ciid}}&delta=-1",
+          "host": [
+            "{{host}}"
+          ],
+          "path": [
+            "cart"
+          ],
+          "query": [
+            {
+              "key": "ciid",
+              "value": "{{ciid}}",
+              "description": "Змінна {{ciid}}"
+            },
+            {
+              "key": "delta",
+              "value": "-1",
+              "description": "Зменшення до 0"
+            }
+          ]
+        },
+        "description": "Граничний випадок: спроба зменшити кількість до 0. Повертає 200 OK із повідомленням: 'delta' causes zero quantity. For deletion use DELETE request."
+      },
+      "response": []
+    },
+    {
+      "name": "3. PATCH Cart Item - Negative Qty Warning [200 OK]",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status code is 200 OK', function () {",
+              "    pm.response.to.have.status(200);",
+              "});",
+              "pm.test('Response warns about negative quantity', function () {",
+              "    var jsonData = pm.response.json();",
+              "    pm.expect(jsonData.status.code).to.eql(200);",
+              "    pm.expect(jsonData.data).to.include('causes negative quantity');",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "PATCH",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{user6}}",
+            "type": "text"
+          }
+        ],
+        "url": {
+          "raw": "{{host}}/cart?ciid={{ciid}}&delta=-10",
+          "host": [
+            "{{host}}"
+          ],
+          "path": [
+            "cart"
+          ],
+          "query": [
+            {
+              "key": "ciid",
+              "value": "{{ciid}}",
+              "description": "Змінна {{ciid}}"
+            },
+            {
+              "key": "delta",
+              "value": "-10",
+              "description": "Значне зменшення, що спричиняє від'ємну кількість"
+            }
+          ]
+        },
+        "description": "Граничний випадок: від'ємна кількість товару. Повертає 200 OK із повідомленням 'causes negative quantity'."
+      },
+      "response": []
+    },
+    {
+      "name": "4. PATCH Cart Item - Exceeded Stock Limit [200 OK]",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status code is 200 OK', function () {",
+              "    pm.response.to.have.status(200);",
+              "});",
+              "pm.test('Response warns about exceeding stock limit', function () {",
+              "    var jsonData = pm.response.json();",
+              "    pm.expect(jsonData.status.code).to.eql(200);",
+              "    pm.expect(jsonData.data).to.include('exceeded stock limit');",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "PATCH",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{user6}}",
+            "type": "text"
+          }
+        ],
+        "url": {
+          "raw": "{{host}}/cart?ciid={{ciid}}&delta=9999",
+          "host": [
+            "{{host}}"
+          ],
+          "path": [
+            "cart"
+          ],
+          "query": [
+            {
+              "key": "ciid",
+              "value": "{{ciid}}",
+              "description": "Змінна {{ciid}}"
+            },
+            {
+              "key": "delta",
+              "value": "9999",
+              "description": "Перевищення залишку на складі"
+            }
+          ]
+        },
+        "description": "Граничний випадок: перевищення наявності товару на складі. Повертає 200 OK із повідомленням 'exceeded stock limit'."
+      },
+      "response": []
+    },
+    {
+      "name": "5. PATCH Cart Item - Unauthorized [401 Unauthorized]",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status code is 401 Unauthorized', function () {",
+              "    pm.response.to.have.status(401);",
+              "});",
+              "pm.test('Unauthorized response returned', function () {",
+              "    var jsonData = pm.response.json();",
+              "    pm.expect(jsonData.status.code).to.eql(401);",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "PATCH",
+        "header": [],
+        "url": {
+          "raw": "{{host}}/cart?ciid={{ciid}}&delta=1",
+          "host": [
+            "{{host}}"
+          ],
+          "path": [
+            "cart"
+          ],
+          "query": [
+            {
+              "key": "ciid",
+              "value": "{{ciid}}",
+              "description": "Змінна {{ciid}}"
+            },
+            {
+              "key": "delta",
+              "value": "1"
+            }
+          ]
+        },
+        "description": "Спроба модифікації кількості без передачі токена авторизації Bearer. Повертає 401 Unauthorized."
+      },
+      "response": []
+    },
+    {
+      "name": "6. PATCH Cart Item - Belongs to Another Entity [403 Forbidden]",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status code is 403 Forbidden', function () {",
+              "    pm.response.to.have.status(403);",
+              "});",
+              "pm.test('Response indicates item belongs to another entity', function () {",
+              "    var jsonData = pm.response.json();",
+              "    pm.expect(jsonData.status.code).to.eql(403);",
+              "    pm.expect(jsonData.data).to.include('belongs to another entity');",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "PATCH",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{user6}}",
+            "type": "text"
+          }
+        ],
+        "url": {
+          "raw": "{{host}}/cart?ciid={{ciid_other}}&delta=1",
+          "host": [
+            "{{host}}"
+          ],
+          "path": [
+            "cart"
+          ],
+          "query": [
+            {
+              "key": "ciid",
+              "value": "{{ciid_other}}",
+              "description": "ID позиції, яка існує в БД, але належить чужому кошику"
+            },
+            {
+              "key": "delta",
+              "value": "1"
+            }
+          ]
+        },
+        "description": "Перевірка безпеки: позиція існує в базі даних, але належить іншому кошику / користувачу. Повертає 403 Forbidden."
+      },
+      "response": []
+    },
+    {
+      "name": "7. PATCH Cart Item - Not Found in DB [404 Not Found]",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status code is 404 Not Found', function () {",
+              "    pm.response.to.have.status(404);",
+              "});",
+              "pm.test('Response indicates cart item not found', function () {",
+              "    var jsonData = pm.response.json();",
+              "    pm.expect(jsonData.status.code).to.eql(404);",
+              "    pm.expect(jsonData.data).to.include('not found');",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "PATCH",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{user6}}",
+            "type": "text"
+          }
+        ],
+        "url": {
+          "raw": "{{host}}/cart?ciid={{ciid_wrong}}&delta=1",
+          "host": [
+            "{{host}}"
+          ],
+          "path": [
+            "cart"
+          ],
+          "query": [
+            {
+              "key": "ciid",
+              "value": "{{ciid_wrong}}",
+              "description": "Неіснуючий ID позиції"
+            },
+            {
+              "key": "delta",
+              "value": "1"
+            }
+          ]
+        },
+        "description": "Спроба оновити позицію, якої взагалі не існує в базі даних. Повертає 404 Not Found."
+      },
+      "response": []
+    },
+    {
+      "name": "8. PATCH Cart Item - Missing Ciid Parameter [442 Missing Query Parameter]",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status code is 442 Missing Query Parameter', function () {",
+              "    pm.response.to.have.status(442);",
+              "});",
+              "pm.test('Response explains ciid parameter is missing', function () {",
+              "    var jsonData = pm.response.json();",
+              "    pm.expect(jsonData.status.code).to.eql(442);",
+              "    pm.expect(jsonData.data).to.include('ciid');",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "PATCH",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{user6}}",
+            "type": "text"
+          }
+        ],
+        "url": {
+          "raw": "{{host}}/cart?delta=1",
+          "host": [
+            "{{host}}"
+          ],
+          "path": [
+            "cart"
+          ],
+          "query": [
+            {
+              "key": "delta",
+              "value": "1",
+              "description": "Параметр ciid навмисно не передається"
+            }
+          ]
+        },
+        "description": "Помилка валідації: обов'язковий параметр ciid не передано в запиті. Повертає 442 Missing Query Parameter."
+      },
+      "response": []
+    },
+    {
+      "name": "9. PATCH Cart Item - Missing Delta Parameter [422 Unprocessable Content]",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status code is 422 Unprocessable Content', function () {",
+              "    pm.response.to.have.status(422);",
+              "});",
+              "pm.test('Response indicates delta/cnt parameter is missing', function () {",
+              "    var jsonData = pm.response.json();",
+              "    pm.expect(jsonData.status.code).to.eql(422);",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "PATCH",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{user6}}",
+            "type": "text"
+          }
+        ],
+        "url": {
+          "raw": "{{host}}/cart?ciid={{ciid}}",
+          "host": [
+            "{{host}}"
+          ],
+          "path": [
+            "cart"
+          ],
+          "query": [
+            {
+              "key": "ciid",
+              "value": "{{ciid}}",
+              "description": "Змінна {{ciid}}"
+            }
+          ]
+        },
+        "description": "Помилка валідації: передано ciid, але не передано параметр delta або cnt для зміни кількості. Повертає 422 Unprocessable Content."
+      },
+      "response": []
+    }
+  ]
+}
+

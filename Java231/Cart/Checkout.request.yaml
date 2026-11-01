@@ -1,0 +1,9 @@
+$kind: http-request
+url: "{{host}}/cart?checkout=true"
+method: DELETE
+headers:
+  Authorization: Bearer {{user2}}
+queryParams:
+  checkout: "true"
+order: 9000
+

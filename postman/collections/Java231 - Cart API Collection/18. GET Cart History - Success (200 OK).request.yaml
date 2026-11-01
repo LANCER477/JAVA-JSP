@@ -1,0 +1,21 @@
+$kind: http-request
+description: Отримання історії кошиків користувача (200 OK)
+url: "{{host}}/cart/history"
+method: GET
+headers:
+  Authorization: Bearer {{user2}}
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test('Status code is 200 OK', function () {
+          pm.response.to.have.status(200);
+      });
+      pm.test('Cart history array returned', function () {
+          var jsonData = pm.response.json();
+          pm.expect(jsonData.status.code).to.eql(200);
+          pm.expect(jsonData.meta.dataType).to.eql('array');
+          pm.expect(Array.isArray(jsonData.data)).to.be.true;
+      });
+    language: text/javascript
+order: 18000
+

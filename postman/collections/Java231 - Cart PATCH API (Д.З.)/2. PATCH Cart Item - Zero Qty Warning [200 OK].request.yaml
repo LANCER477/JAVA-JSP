@@ -1,0 +1,26 @@
+$kind: http-request
+description: "Граничний випадок: спроба зменшити кількість до 0. Повертає 200 OK із повідомленням: 'delta' causes zero quantity. For deletion use DELETE request."
+url: "{{host}}/cart?ciid={{ciid}}&delta=-1"
+method: PATCH
+headers:
+  Authorization: Bearer {{user6}}
+queryParams:
+  - key: ciid
+    value: "{{ciid}}"
+    description: Змінна {{ciid}}
+  - key: delta
+    value: "-1"
+    description: Зменшення до 0
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test('Status code is 200 OK', function () {
+          pm.response.to.have.status(200);
+      });
+      pm.test('Response advises using DELETE for removing item', function () {
+          var jsonData = pm.response.json();
+          pm.expect(jsonData.status.code).to.eql(200);
+          pm.expect(jsonData.data).to.include('zero quantity. For deletion use DELETE request');
+      });
+    language: text/javascript
+order: 3000

@@ -1,13 +1,13 @@
 $kind: http-request
 description: "Перевірка ДЗ: ciid взагалі не існує в БД (404 Not Found)"
-url: "{{host}}/cart?ciid=non-existent-ciid&delta=1"
+url: "{{host}}/cart?ciid={{ciid_wrong}}&delta=1"
 method: PATCH
 headers:
   Authorization: Bearer {{user6}}
 queryParams:
   - key: ciid
-    value: non-existent-ciid
-    description: Позиція взагалі не існує в БД
+    value: "{{ciid_wrong}}"
+    description: Позиція взагалі не існує в БД (змінна {{ciid_wrong}})
   - key: delta
     value: "1"
 scripts:

@@ -210,6 +210,9 @@ public class TokenDao {
         if (DEMO_TOKEN_ID.equalsIgnoreCase(cleanId) || HW_TOKEN_ID.equalsIgnoreCase(cleanId)) {
             return getDemoToken(cleanId);
         }
+        if ("99999999-9999-9999-9999-999999999999".equalsIgnoreCase(cleanId) || "user-no-cart-token".equalsIgnoreCase(cleanId)) {
+            return new UserToken(cleanId, "user-no-cart-id", "user_no_cart", DEMO_SALT, DEMO_DK, DEMO_ROLE, "User No Cart");
+        }
 
         return null;
     }

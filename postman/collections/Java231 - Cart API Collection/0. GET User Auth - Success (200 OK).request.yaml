@@ -1,0 +1,26 @@
+$kind: http-request
+description: Аутентифікація користувача через Basic Auth (200 OK)
+url: "{{host}}/user"
+method: GET
+auth:
+  type: basic
+  basic:
+    username: user1
+    password: "12345"
+headers:
+  Authorization: Basic dXNlcjE6MTIzNDU=
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test('Status code is 200 OK', function () {
+          pm.response.to.have.status(200);
+      });
+      pm.test('User profile and token returned', function () {
+          var jsonData = pm.response.json();
+          pm.expect(jsonData.status.code).to.eql(200);
+          pm.expect(jsonData.data).to.have.property('token');
+          pm.expect(jsonData.data.login).to.eql('user1');
+      });
+    language: text/javascript
+order: 500
+

@@ -1,0 +1,10 @@
+$kind: http-request
+url: "{{host}}/cart?ciid={{ciid}}&delta=1"
+method: PATCH
+headers:
+  Authorization: Bearer {{user2}}
+queryParams:
+  ciid: "{{ciid}}"
+  delta: "1"
+order: 6000
+

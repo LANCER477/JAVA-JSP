@@ -1,0 +1,26 @@
+$kind: http-request
+description: "Граничний випадок: від'ємна кількість товару. Повертає 200 OK із повідомленням 'causes negative quantity'."
+url: "{{host}}/cart?ciid={{ciid}}&delta=-10"
+method: PATCH
+headers:
+  Authorization: Bearer {{user6}}
+queryParams:
+  - key: ciid
+    value: "{{ciid}}"
+    description: Змінна {{ciid}}
+  - key: delta
+    value: "-10"
+    description: Значне зменшення, що спричиняє від'ємну кількість
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test('Status code is 200 OK', function () {
+          pm.response.to.have.status(200);
+      });
+      pm.test('Response warns about negative quantity', function () {
+          var jsonData = pm.response.json();
+          pm.expect(jsonData.status.code).to.eql(200);
+          pm.expect(jsonData.data).to.include('causes negative quantity');
+      });
+    language: text/javascript
+order: 4000

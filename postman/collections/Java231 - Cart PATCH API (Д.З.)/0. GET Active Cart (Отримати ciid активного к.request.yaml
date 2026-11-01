@@ -1,0 +1,23 @@
+$kind: http-request
+name: 0. GET Active Cart (Отримати ciid активного кошика)
+description: Отримання активного кошика та автоматичне оновлення змінної {{ciid}} першим знайденим товаром
+url: "{{host}}/cart"
+method: GET
+headers:
+  Authorization: Bearer {{user6}}
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test('Status code is 200 OK', function () {
+          pm.response.to.have.status(200);
+      });
+      pm.test('Cart has items and sets ciid variable if present', function () {
+          var jsonData = pm.response.json();
+          pm.expect(jsonData.status.code).to.eql(200);
+          if (jsonData.data && jsonData.data.cartItems && jsonData.data.cartItems.length > 0) {
+              pm.collectionVariables.set('ciid', jsonData.data.cartItems[0].id);
+              console.log('Centralized ciid updated to: ' + jsonData.data.cartItems[0].id);
+          }
+      });
+    language: text/javascript
+order: 1000

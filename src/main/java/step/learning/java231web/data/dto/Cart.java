@@ -3,6 +3,7 @@ package step.learning.java231web.data.dto;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Timestamp;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
@@ -10,9 +11,9 @@ import java.util.List;
 public class Cart {
     private String id;
     private String userId;
-    private Date createdAt;
-    private Date closedAt;
-    private int status; // 0 - active, 1 - closed
+    private String openAt;
+    private String closeAt;
+    private Integer status; // null for active cart, 0/1 for closed
     private double price;
     private List<CartItem> cartItems = new ArrayList<>();
 
@@ -38,21 +39,50 @@ public class Cart {
             try {
                 cart.setUserId(rs.getString("user_id"));
             } catch (SQLException ignored) {}
+
+            SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+
             try {
-                Timestamp tsCreated = rs.getTimestamp("cart_create_dt");
-                if (tsCreated != null) {
-                    cart.setCreatedAt(new Date(tsCreated.getTime()));
+                Timestamp tsOpen = null;
+                try { tsOpen = rs.getTimestamp("cart_open_at"); } catch (SQLException ignored) {}
+                if (tsOpen == null) {
+                    try { tsOpen = rs.getTimestamp("cart_create_dt"); } catch (SQLException ignored) {}
                 }
-            } catch (SQLException ignored) {}
-            try {
-                Timestamp tsClosed = rs.getTimestamp("cart_close_dt");
-                if (tsClosed != null) {
-                    cart.setClosedAt(new Date(tsClosed.getTime()));
+                if (tsOpen != null) {
+                    cart.setOpenAt(sdf.format(tsOpen));
+                } else {
+                    cart.setOpenAt(sdf.format(new Date()));
                 }
-            } catch (SQLException ignored) {}
+            } catch (Exception ignored) {
+                cart.setOpenAt(sdf.format(new Date()));
+            }
+
             try {
-                cart.setStatus(rs.getInt("cart_status"));
+                Timestamp tsClose = null;
+                try { tsClose = rs.getTimestamp("cart_close_at"); } catch (SQLException ignored) {}
+                if (tsClose == null) {
+                    try { tsClose = rs.getTimestamp("cart_close_dt"); } catch (SQLException ignored) {}
+                }
+                if (tsClose != null) {
+                    cart.setCloseAt(sdf.format(tsClose));
+                }
+            } catch (Exception ignored) {}
+
+            try {
+                Object statusObj = rs.getObject("cart_status");
+                if (statusObj != null && rs.getInt("cart_status") != 0) {
+                    cart.setStatus(rs.getInt("cart_status"));
+                } else {
+                    cart.setStatus(null);
+                }
+            } catch (SQLException ignored) {
+                cart.setStatus(null);
+            }
+
+            try {
+                cart.setPrice(rs.getDouble("cart_price"));
             } catch (SQLException ignored) {}
+
             return cart;
         } catch (Exception ex) {
             return null;
@@ -77,29 +107,65 @@ public class Cart {
         return this;
     }
 
+    public String getOpenAt() {
+        return openAt;
+    }
+
+    public Cart setOpenAt(String openAt) {
+        this.openAt = openAt;
+        return this;
+    }
+
     public Date getCreatedAt() {
-        return createdAt;
+        if (openAt == null) return null;
+        try {
+            return new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").parse(openAt);
+        } catch (Exception e) {
+            return null;
+        }
     }
 
     public Cart setCreatedAt(Date createdAt) {
-        this.createdAt = createdAt;
+        if (createdAt != null) {
+            this.openAt = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(createdAt);
+        } else {
+            this.openAt = null;
+        }
+        return this;
+    }
+
+    public String getCloseAt() {
+        return closeAt;
+    }
+
+    public Cart setCloseAt(String closeAt) {
+        this.closeAt = closeAt;
         return this;
     }
 
     public Date getClosedAt() {
-        return closedAt;
+        if (closeAt == null) return null;
+        try {
+            return new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").parse(closeAt);
+        } catch (Exception e) {
+            return null;
+        }
     }
 
     public Cart setClosedAt(Date closedAt) {
-        this.closedAt = closedAt;
+        if (closedAt != null) {
+            this.closeAt = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(closedAt);
+        } else {
+            this.closeAt = null;
+        }
         return this;
     }
 
-    public int getStatus() {
+    public Integer getStatus() {
         return status;
     }
 
-    public Cart setStatus(int status) {
+    public Cart setStatus(Integer status) {
         this.status = status;
         return this;
     }

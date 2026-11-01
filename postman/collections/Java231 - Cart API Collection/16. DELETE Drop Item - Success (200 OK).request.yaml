@@ -1,0 +1,23 @@
+$kind: http-request
+description: Успішне видалення позиції з кошика (Drop Item 200 OK)
+url: "{{host}}/cart?ciid={{ciid}}"
+method: DELETE
+headers:
+  Authorization: Bearer {{user2}}
+queryParams:
+  - key: ciid
+    value: "{{ciid}}"
+    description: ID позиції у власному кошику (змінна {{ciid}})
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test('Status code is 200 OK', function () {
+          pm.response.to.have.status(200);
+      });
+      pm.test('Cart updated after item deletion', function () {
+          var jsonData = pm.response.json();
+          pm.expect(jsonData.status.code).to.eql(200);
+          pm.expect(jsonData.data).to.have.property('cartItems');
+      });
+    language: text/javascript
+order: 16000

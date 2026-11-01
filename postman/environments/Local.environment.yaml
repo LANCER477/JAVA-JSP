@@ -1,7 +1,21 @@
 name: Local
 values:
-  - key: Local
-    value: ''
   - key: host
-    value: ''
+    value: http://localhost:8080/java231web
+    enabled: true
+  - key: user2
+    value: 024ad494-bafd-11f1-9d1a-84ba59d7b864
+    enabled: true
+  - key: user6
+    value: 024ad494-bafd-11f1-9d1a-84ba59d7b864
+    enabled: true
+  - key: ciid
+    value: 71fa341a-3b64-454f-934c-713ded90ee3d
+    enabled: true
+  - key: ciid_other
+    value: 77777777-7777-7777-7777-777777777777
+    enabled: true
+  - key: ciid_wrong
+    value: 00000000-0000-0000-0000-000000000000
+    enabled: true
 color: 0

@@ -325,6 +325,34 @@ public class ProductVersionDao {
             String outOfStockId = "3fa85f64-5717-4562-b3fc-2c963f66afa6";
             insertSampleVersionIfMissing(outOfStockId, iphoneId, "Out of Stock Edition", "Out of Stock Edition", "out-of-stock", null, 100, 125000.0, 0);
 
+            // Samsung Galaxy S24 Ultra (Alternative product from instructor's ciid demo)
+            String samsungId = "f1112222-3333-4444-5555-666677778888";
+            String checkSamsungSql = "SELECT COUNT(*) FROM products WHERE product_id = '" + samsungId + "'";
+            try (Statement stmt = dbService.getConnection().createStatement();
+                 ResultSet rs = stmt.executeQuery(checkSamsungSql)) {
+                if (!rsSecCount(stmt, checkSamsungSql)) {
+                    String insertSamsung = "INSERT INTO products "
+                            + "(product_id, product_section_id, product_title, product_description, product_slug, "
+                            + "product_price, product_stock, product_order, product_image) "
+                            + "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)";
+                    try (PreparedStatement prep = dbService.getConnection().prepareStatement(insertSamsung)) {
+                        prep.setString(1, samsungId);
+                        prep.setString(2, androidSectionId);
+                        prep.setString(3, "Samsung Galaxy S24 Ultra");
+                        prep.setString(4, "AI smartphone with Dynamic AMOLED 2X and S-Pen");
+                        prep.setString(5, "samsung-galaxy-s24-ultra");
+                        prep.setDouble(6, 54999.0);
+                        prep.setInt(7, 50);
+                        prep.setInt(8, 2);
+                        prep.setString(9, "samsung-s24.webp");
+                        prep.executeUpdate();
+                    }
+                }
+            }
+
+            String samsungVerId = "d2223333-4444-5555-6666-777788889999";
+            insertSampleVersionIfMissing(samsungVerId, samsungId, "Titanium Gray 512GB", "Titanium Gray 512GB flagship edition", "titanium-gray", "samsung-s24-gray.webp", 1, 54999.0, 20);
+
         } catch (Exception ex) {
             logger.log(Level.INFO, "Could not seed sample versions: " + ex.getMessage());
         }

@@ -1,0 +1,23 @@
+$kind: http-request
+description: "Перевірка 2: Переконатись, що даний CartItem належить авторизованому користувачеві (повертає 403 Forbidden)"
+url: "{{host}}/cart?ciid={{ciid_other}}"
+method: DELETE
+headers:
+  Authorization: Bearer {{user6}}
+queryParams:
+  - key: ciid
+    value: "{{ciid_other}}"
+    description: ID товару чужого користувача
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test('Status code is 403 Forbidden', function () {
+          pm.response.to.have.status(403);
+      });
+      pm.test('Response indicates item belongs to another entity/user', function () {
+          var jsonData = pm.response.json();
+          pm.expect(jsonData.status.code).to.eql(403);
+          pm.expect(jsonData.data).to.include('belongs to another entity');
+      });
+    language: text/javascript
+order: 2000

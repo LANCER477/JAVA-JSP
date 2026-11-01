@@ -1,0 +1,23 @@
+$kind: http-request
+description: "Перевірка 4: Переконатись, що він належить до активного (відкритого) кошику (повертає 409 Conflict)"
+url: "{{host}}/cart?ciid={{ciid_closed}}"
+method: DELETE
+headers:
+  Authorization: Bearer {{user6}}
+queryParams:
+  - key: ciid
+    value: "{{ciid_closed}}"
+    description: Товар із закритого кошика того ж користувача
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test('Status code is 409 Conflict', function () {
+          pm.response.to.have.status(409);
+      });
+      pm.test('Response indicates item belongs to closed cart', function () {
+          var jsonData = pm.response.json();
+          pm.expect(jsonData.status.code).to.eql(409);
+          pm.expect(jsonData.data).to.include('closed cart');
+      });
+    language: text/javascript
+order: 4000

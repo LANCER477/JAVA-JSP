@@ -63,11 +63,13 @@ public class UserServletTest {
         assertEquals("OK", restResponse.getStatus().getMessage());
 
         assertNotNull(restResponse.getMeta());
-        assertEquals("UserServlet::authenticate", restResponse.getMeta().getService());
+        assertEquals("API 'Users'", restResponse.getMeta().getServiceName());
 
         assertNotNull(restResponse.getData());
-        String token = restResponse.getData().toString();
-        assertEquals(3, token.split("\\.").length, "JWT token must have 3 parts separated by dots");
+        assertTrue(restResponse.getData() instanceof Map);
+        Map<?, ?> dataMap = (Map<?, ?>) restResponse.getData();
+        assertEquals(login, dataMap.get("login"));
+        assertNotNull(dataMap.get("token"));
     }
 
     @Test

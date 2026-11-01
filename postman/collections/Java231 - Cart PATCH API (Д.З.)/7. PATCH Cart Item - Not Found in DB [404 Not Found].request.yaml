@@ -1,0 +1,25 @@
+$kind: http-request
+description: Спроба оновити позицію, якої взагалі не існує в базі даних. Повертає 404 Not Found.
+url: "{{host}}/cart?ciid={{ciid_wrong}}&delta=1"
+method: PATCH
+headers:
+  Authorization: Bearer {{user6}}
+queryParams:
+  - key: ciid
+    value: "{{ciid_wrong}}"
+    description: Неіснуючий ID позиції
+  - key: delta
+    value: "1"
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test('Status code is 404 Not Found', function () {
+          pm.response.to.have.status(404);
+      });
+      pm.test('Response indicates cart item not found', function () {
+          var jsonData = pm.response.json();
+          pm.expect(jsonData.status.code).to.eql(404);
+          pm.expect(jsonData.data).to.include('not found');
+      });
+    language: text/javascript
+order: 8000

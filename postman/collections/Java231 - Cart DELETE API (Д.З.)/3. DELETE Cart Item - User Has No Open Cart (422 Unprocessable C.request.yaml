@@ -1,0 +1,24 @@
+$kind: http-request
+name: 3. DELETE Cart Item - User Has No Open Cart (422 Unprocessable Content)
+description: "Перевірка 3: Переконатись, що користувач має відкритий кошик (повертає 422 Unprocessable Content)"
+url: "{{host}}/cart?ciid={{ciid_no_cart}}"
+method: DELETE
+headers:
+  Authorization: Bearer {{user_no_cart}}
+queryParams:
+  - key: ciid
+    value: "{{ciid_no_cart}}"
+    description: Товар користувача без відкритого кошика
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test('Status code is 422 Unprocessable Content', function () {
+          pm.response.to.have.status(422);
+      });
+      pm.test('Response indicates user has no open cart', function () {
+          var jsonData = pm.response.json();
+          pm.expect(jsonData.status.code).to.eql(422);
+          pm.expect(jsonData.data).to.include('no open cart');
+      });
+    language: text/javascript
+order: 3000

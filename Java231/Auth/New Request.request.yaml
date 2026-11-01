@@ -1,0 +1,12 @@
+$kind: http-request
+url: "{{host}}/user"
+method: GET
+auth:
+  type: basic
+  basic:
+    username: user1
+    password: "12345"
+headers:
+  Authorization: Basic dXNlcjE6MTIzNDU=
+order: 1000
+

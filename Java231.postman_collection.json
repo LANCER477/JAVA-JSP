@@ -14,6 +14,26 @@
 			"key": "user6",
 			"value": "024ad494-bafd-11f1-9d1a-84ba59d7b864",
 			"type": "string"
+		},
+		{
+			"key": "user2",
+			"value": "024ad494-bafd-11f1-9d1a-84ba59d7b864",
+			"type": "string"
+		},
+		{
+			"key": "ciid",
+			"value": "71fa341a-3b64-454f-934c-713ded90ee3d",
+			"type": "string"
+		},
+		{
+			"key": "ciid_other",
+			"value": "77777777-7777-7777-7777-777777777777",
+			"type": "string"
+		},
+		{
+			"key": "ciid_wrong",
+			"value": "00000000-0000-0000-0000-000000000000",
+			"type": "string"
 		}
 	],
 	"item": [
@@ -329,36 +349,36 @@
 					"response": []
 				},
 				{
-					"name": "Update Cart",
+					"name": "PATCH Inc Item",
 					"request": {
 						"auth": {
 							"type": "bearer",
 							"bearer": [
 								{
 									"key": "token",
-									"value": "{{user6}}",
+									"value": "{{user2}}",
 									"type": "string"
 								}
 							]
 						},
 						"method": "PATCH",
-						"header": [
-							{
-								"key": "Content-Type",
-								"value": "application/json"
-							}
-						],
-						"body": {
-							"mode": "raw",
-							"raw": "{\n  \"productVersionId\": \"81fc3041-e5f0-41b7-9420-7b03f5a10316\",\n  \"quantity\": 2\n}"
-						},
 						"url": {
-							"raw": "{{host}}/cart",
+							"raw": "{{host}}/cart?ciid={{ciid}}&delta=1",
 							"host": [
 								"{{host}}"
 							],
 							"path": [
 								"cart"
+							],
+							"query": [
+								{
+									"key": "ciid",
+									"value": "{{ciid}}"
+								},
+								{
+									"key": "delta",
+									"value": "1"
+								}
 							]
 						}
 					},

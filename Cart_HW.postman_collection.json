@@ -15,6 +15,41 @@
       "key": "user6",
       "value": "024ad494-bafd-11f1-9d1a-84ba59d7b864",
       "type": "string"
+    },
+    {
+      "key": "user2",
+      "value": "024ad494-bafd-11f1-9d1a-84ba59d7b864",
+      "type": "string"
+    },
+    {
+      "key": "ciid",
+      "value": "71fa341a-3b64-454f-934c-713ded90ee3d",
+      "type": "string"
+    },
+    {
+      "key": "ciid_other",
+      "value": "77777777-7777-7777-7777-777777777777",
+      "type": "string"
+    },
+    {
+      "key": "ciid_wrong",
+      "value": "00000000-0000-0000-0000-000000000000",
+      "type": "string"
+    },
+    {
+      "key": "ciid_closed",
+      "value": "88888888-8888-8888-8888-888888888888",
+      "type": "string"
+    },
+    {
+      "key": "ciid_no_cart",
+      "value": "99999999-9999-9999-9999-999999999999",
+      "type": "string"
+    },
+    {
+      "key": "user_no_cart",
+      "value": "99999999-9999-9999-9999-999999999999",
+      "type": "string"
     }
   ],
   "item": [
@@ -457,7 +492,7 @@
           }
         ],
         "url": {
-          "raw": "{{host}}/cart?ciid=656b0596-9c3d-46c0-90bb-e0ec0cc0025a&delta=1",
+          "raw": "{{host}}/cart?ciid={{ciid}}&delta=1",
           "host": [
             "{{host}}"
           ],
@@ -467,7 +502,7 @@
           "query": [
             {
               "key": "ciid",
-              "value": "656b0596-9c3d-46c0-90bb-e0ec0cc0025a",
+              "value": "{{ciid}}",
               "description": "ID позиції у власному кошику"
             },
             {
@@ -511,7 +546,7 @@
           }
         ],
         "url": {
-          "raw": "{{host}}/cart?ciid=77777777-7777-7777-7777-777777777777&delta=1",
+          "raw": "{{host}}/cart?ciid={{ciid_other}}&delta=1",
           "host": [
             "{{host}}"
           ],
@@ -521,7 +556,7 @@
           "query": [
             {
               "key": "ciid",
-              "value": "77777777-7777-7777-7777-777777777777",
+              "value": "{{ciid_other}}",
               "description": "ID позиції, що існує в БД, але належить іншій сутності / іншому кошику"
             },
             {
@@ -564,7 +599,7 @@
           }
         ],
         "url": {
-          "raw": "{{host}}/cart?ciid=non-existent-ciid&delta=1",
+          "raw": "{{host}}/cart?ciid={{ciid_wrong}}&delta=1",
           "host": [
             "{{host}}"
           ],
@@ -574,7 +609,7 @@
           "query": [
             {
               "key": "ciid",
-              "value": "non-existent-ciid",
+              "value": "{{ciid_wrong}}",
               "description": "Позиція взагалі не існує в БД"
             },
             {
@@ -664,7 +699,7 @@
           }
         ],
         "url": {
-          "raw": "{{host}}/cart?ciid=656b0596-9c3d-46c0-90bb-e0ec0cc0025a",
+          "raw": "{{host}}/cart?ciid={{ciid}}",
           "host": [
             "{{host}}"
           ],
@@ -674,7 +709,7 @@
           "query": [
             {
               "key": "ciid",
-              "value": "656b0596-9c3d-46c0-90bb-e0ec0cc0025a"
+              "value": "{{ciid}}"
             }
           ]
         },
@@ -705,7 +740,7 @@
         "method": "PATCH",
         "header": [],
         "url": {
-          "raw": "{{host}}/cart?ciid=656b0596-9c3d-46c0-90bb-e0ec0cc0025a&delta=1",
+          "raw": "{{host}}/cart?ciid={{ciid}}&delta=1",
           "host": [
             "{{host}}"
           ],
@@ -715,7 +750,7 @@
           "query": [
             {
               "key": "ciid",
-              "value": "656b0596-9c3d-46c0-90bb-e0ec0cc0025a"
+              "value": "{{ciid}}"
             },
             {
               "key": "delta",
@@ -724,6 +759,246 @@
           ]
         },
         "description": "Спроба оновити кошик без авторизації (401 Unauthorized)"
+      },
+      "response": []
+    },
+    {
+      "name": "16. DELETE Cart Item - Not Found in DB (404 Not Found)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status code is 404 Not Found', function () {",
+              "    pm.response.to.have.status(404);",
+              "});",
+              "pm.test('Response indicates cart item not found', function () {",
+              "    var jsonData = pm.response.json();",
+              "    pm.expect(jsonData.status.code).to.eql(404);",
+              "    pm.expect(jsonData.data).to.include('Cart item not found');",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "DELETE",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{user6}}",
+            "type": "text"
+          }
+        ],
+        "url": {
+          "raw": "{{host}}/cart?ciid={{ciid_wrong}}",
+          "host": [
+            "{{host}}"
+          ],
+          "path": [
+            "cart"
+          ],
+          "query": [
+            {
+              "key": "ciid",
+              "value": "{{ciid_wrong}}"
+            }
+          ]
+        },
+        "description": "Перевірка 1: Переконатись, що CartItem взагалі існує у БД (404 Not Found)"
+      },
+      "response": []
+    },
+    {
+      "name": "17. DELETE Cart Item - Belongs to Another User (403 Forbidden)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status code is 403 Forbidden', function () {",
+              "    pm.response.to.have.status(403);",
+              "});",
+              "pm.test('Response indicates item belongs to another entity', function () {",
+              "    var jsonData = pm.response.json();",
+              "    pm.expect(jsonData.status.code).to.eql(403);",
+              "    pm.expect(jsonData.data).to.include('belongs to another entity');",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "DELETE",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{user6}}",
+            "type": "text"
+          }
+        ],
+        "url": {
+          "raw": "{{host}}/cart?ciid={{ciid_other}}",
+          "host": [
+            "{{host}}"
+          ],
+          "path": [
+            "cart"
+          ],
+          "query": [
+            {
+              "key": "ciid",
+              "value": "{{ciid_other}}"
+            }
+          ]
+        },
+        "description": "Перевірка 2: Переконатись, що даний CartItem належить авторизованому користувачеві (403 Forbidden)"
+      },
+      "response": []
+    },
+    {
+      "name": "18. DELETE Cart Item - User Has No Open Cart (422 Unprocessable Content)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status code is 422 Unprocessable Content', function () {",
+              "    pm.response.to.have.status(422);",
+              "});",
+              "pm.test('Response indicates user has no open cart', function () {",
+              "    var jsonData = pm.response.json();",
+              "    pm.expect(jsonData.status.code).to.eql(422);",
+              "    pm.expect(jsonData.data).to.include('no open cart');",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "DELETE",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{user_no_cart}}",
+            "type": "text"
+          }
+        ],
+        "url": {
+          "raw": "{{host}}/cart?ciid={{ciid_no_cart}}",
+          "host": [
+            "{{host}}"
+          ],
+          "path": [
+            "cart"
+          ],
+          "query": [
+            {
+              "key": "ciid",
+              "value": "{{ciid_no_cart}}"
+            }
+          ]
+        },
+        "description": "Перевірка 3: Переконатись, що користувач має відкритий кошик (422 Unprocessable Content)"
+      },
+      "response": []
+    },
+    {
+      "name": "19. DELETE Cart Item - Belongs to Closed Cart (409 Conflict)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status code is 409 Conflict', function () {",
+              "    pm.response.to.have.status(409);",
+              "});",
+              "pm.test('Response indicates item belongs to closed cart', function () {",
+              "    var jsonData = pm.response.json();",
+              "    pm.expect(jsonData.status.code).to.eql(409);",
+              "    pm.expect(jsonData.data).to.include('closed cart');",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "DELETE",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{user6}}",
+            "type": "text"
+          }
+        ],
+        "url": {
+          "raw": "{{host}}/cart?ciid={{ciid_closed}}",
+          "host": [
+            "{{host}}"
+          ],
+          "path": [
+            "cart"
+          ],
+          "query": [
+            {
+              "key": "ciid",
+              "value": "{{ciid_closed}}"
+            }
+          ]
+        },
+        "description": "Перевірка 4: Переконатись, що він належить до активного (відкритого) кошику (409 Conflict)"
+      },
+      "response": []
+    },
+    {
+      "name": "20. DELETE Cart Item - Success (200 OK)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status code is 200 OK', function () {",
+              "    pm.response.to.have.status(200);",
+              "});",
+              "pm.test('Cart item removed and updated cart returned', function () {",
+              "    var jsonData = pm.response.json();",
+              "    pm.expect(jsonData.status.code).to.eql(200);",
+              "    pm.expect(jsonData.data).to.have.property('cartItems');",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "DELETE",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{user6}}",
+            "type": "text"
+          }
+        ],
+        "url": {
+          "raw": "{{host}}/cart?ciid={{ciid}}",
+          "host": [
+            "{{host}}"
+          ],
+          "path": [
+            "cart"
+          ],
+          "query": [
+            {
+              "key": "ciid",
+              "value": "{{ciid}}"
+            }
+          ]
+        },
+        "description": "Успішне видалення товару з активного кошика після проходження усіх перевірок (200 OK)"
       },
       "response": []
     }
