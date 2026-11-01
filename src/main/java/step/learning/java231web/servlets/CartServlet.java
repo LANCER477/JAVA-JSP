@@ -94,8 +94,46 @@ public class CartServlet extends HttpServlet {
 
         if (userToken != null) {
             String pathInfo = req.getPathInfo();
+            boolean isOrdered = (pathInfo != null && pathInfo.contains("ordered"))
+                    || req.getParameter("ordered") != null;
+            boolean isDropped = (pathInfo != null && pathInfo.contains("dropped"))
+                    || req.getParameter("dropped") != null;
             boolean isHistory = (pathInfo != null && pathInfo.contains("history"))
                     || req.getParameter("history") != null;
+
+            if (isOrdered) {
+                java.util.List<Cart> ordered = null;
+                if (cartDao != null) {
+                    try {
+                        ordered = cartDao.getUserOrderedCarts(userToken.getUserId());
+                    } catch (Exception ignored) {}
+                }
+                if (ordered == null) {
+                    ordered = Collections.emptyList();
+                }
+                RestMeta orderedMeta = createMeta(null, "array");
+                RestResponse okResponse = RestResponse.Ok(orderedMeta, ordered);
+                resp.setStatus(HttpServletResponse.SC_OK);
+                resp.getWriter().print(gson.toJson(okResponse));
+                return;
+            }
+
+            if (isDropped) {
+                java.util.List<Cart> dropped = null;
+                if (cartDao != null) {
+                    try {
+                        dropped = cartDao.getUserDroppedCarts(userToken.getUserId());
+                    } catch (Exception ignored) {}
+                }
+                if (dropped == null) {
+                    dropped = Collections.emptyList();
+                }
+                RestMeta droppedMeta = createMeta(null, "array");
+                RestResponse okResponse = RestResponse.Ok(droppedMeta, dropped);
+                resp.setStatus(HttpServletResponse.SC_OK);
+                resp.getWriter().print(gson.toJson(okResponse));
+                return;
+            }
 
             if (isHistory) {
                 java.util.List<Cart> history = null;

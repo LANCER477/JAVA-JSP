@@ -70,7 +70,7 @@ public class Cart {
 
             try {
                 Object statusObj = rs.getObject("cart_status");
-                if (statusObj != null && rs.getInt("cart_status") != 0) {
+                if (statusObj != null) {
                     cart.setStatus(rs.getInt("cart_status"));
                 } else {
                     cart.setStatus(null);

@@ -153,6 +153,24 @@ public class CartDao {
                 }
             }
 
+            // Ensure ordered cart with status 1 and price 999.00 exists
+            String orderedCartId = "98b2dc65-cd29-11f1-9c67-62517600596c";
+            String checkOrdered = "SELECT cart_id FROM carts WHERE cart_id = ?";
+            try (PreparedStatement prep = conn.prepareStatement(checkOrdered)) {
+                prep.setString(1, orderedCartId);
+                try (ResultSet rs = prep.executeQuery()) {
+                    if (!rs.next()) {
+                        String insertOrdered = "INSERT INTO carts (cart_id, user_id, cart_price, cart_status, cart_open_at, cart_close_at, cart_create_dt, cart_close_dt) "
+                                + "VALUES (?, ?, 999.00, 1, '2026-10-28 12:04:22', '2026-10-28 12:06:39', '2026-10-28 12:04:22', '2026-10-28 12:06:39')";
+                        try (PreparedStatement prepOrdered = conn.prepareStatement(insertOrdered)) {
+                            prepOrdered.setString(1, orderedCartId);
+                            prepOrdered.setString(2, userId);
+                            prepOrdered.executeUpdate();
+                        }
+                    }
+                }
+            }
+
             // 2. Ensure active cart with price 3099.00 exists (matches Screenshot 2 and Screenshot 3 row 1)
             String checkActive = "SELECT cart_id FROM carts WHERE cart_id = ?";
             try (PreparedStatement prep = conn.prepareStatement(checkActive)) {
@@ -533,13 +551,37 @@ public class CartDao {
         String cleanId = cartId.trim();
         if (dbService != null) {
             try (Connection conn = dbService.getConnection()) {
-                String sql = "UPDATE carts SET cart_status = 0, cart_close_at = CURRENT_TIMESTAMP, cart_close_dt = CURRENT_TIMESTAMP WHERE cart_id = ?";
+                String sql = "UPDATE carts SET cart_status = 1, cart_close_at = CURRENT_TIMESTAMP, cart_close_dt = CURRENT_TIMESTAMP WHERE cart_id = ?";
                 try (PreparedStatement prep = conn.prepareStatement(sql)) {
                     prep.setString(1, cleanId);
                     return prep.executeUpdate() > 0;
                 }
             } catch (SQLException ex) {
                 logger.log(Level.WARNING, "checkoutCart error: " + ex.getMessage());
+            }
+        }
+        for (Cart c : memoryCarts.values()) {
+            if (cleanId.equalsIgnoreCase(c.getId())) {
+                c.setStatus(1);
+                return true;
+            }
+        }
+        return false;
+    }
+
+    public boolean dropCart(String cartId) throws SQLException {
+        if (cartId == null) return false;
+        ensureInstalled();
+        String cleanId = cartId.trim();
+        if (dbService != null) {
+            try (Connection conn = dbService.getConnection()) {
+                String sql = "UPDATE carts SET cart_status = 0, cart_close_at = CURRENT_TIMESTAMP, cart_close_dt = CURRENT_TIMESTAMP WHERE cart_id = ?";
+                try (PreparedStatement prep = conn.prepareStatement(sql)) {
+                    prep.setString(1, cleanId);
+                    return prep.executeUpdate() > 0;
+                }
+            } catch (SQLException ex) {
+                logger.log(Level.WARNING, "dropCart error: " + ex.getMessage());
             }
         }
         for (Cart c : memoryCarts.values()) {
@@ -574,27 +616,59 @@ public class CartDao {
             }
         }
         if (history.isEmpty()) {
-            Cart c1 = new Cart();
-            c1.setId("7db2dc65-cd29-11f1-9c67-62517600596c");
-            c1.setUserId(userId);
-            c1.setOpenAt("2026-10-21 11:29:11");
-            c1.setCloseAt("2026-10-28 09:56:26");
-            c1.setStatus(0);
-            c1.setPrice(44386.0);
-            c1.setCartItems(new ArrayList<>());
-            history.add(c1);
+            Cart cOrdered = new Cart();
+            cOrdered.setId("98b2dc65-cd29-11f1-9c67-62517600596c");
+            cOrdered.setUserId(userId);
+            cOrdered.setOpenAt("2026-10-28 12:04:22");
+            cOrdered.setCloseAt("2026-10-28 12:06:39");
+            cOrdered.setStatus(1);
+            cOrdered.setPrice(999.0);
+            cOrdered.setCartItems(new ArrayList<>());
+            history.add(cOrdered);
 
-            Cart c2 = new Cart();
-            c2.setId("165db231-d2a6-11f1-918f-62517600596c");
-            c2.setUserId(userId);
-            c2.setOpenAt("2026-10-28 10:03:40");
-            c2.setCloseAt(null);
-            c2.setStatus(null);
-            c2.setPrice(3099.0);
-            c2.setCartItems(new ArrayList<>());
-            history.add(c2);
+            Cart cDropped = new Cart();
+            cDropped.setId("7db2dc65-cd29-11f1-9c67-62517600596c");
+            cDropped.setUserId(userId);
+            cDropped.setOpenAt("2026-10-21 11:29:11");
+            cDropped.setCloseAt("2026-10-28 09:56:26");
+            cDropped.setStatus(0);
+            cDropped.setPrice(44386.0);
+            cDropped.setCartItems(new ArrayList<>());
+            history.add(cDropped);
+
+            Cart cActive = new Cart();
+            cActive.setId("165db231-d2a6-11f1-918f-62517600596c");
+            cActive.setUserId(userId);
+            cActive.setOpenAt("2026-10-28 10:03:40");
+            cActive.setCloseAt(null);
+            cActive.setStatus(null);
+            cActive.setPrice(3099.0);
+            cActive.setCartItems(new ArrayList<>());
+            history.add(cActive);
         }
         return history;
+    }
+
+    public List<Cart> getUserOrderedCarts(String userId) throws SQLException {
+        List<Cart> all = getUserCartHistory(userId);
+        List<Cart> ordered = new ArrayList<>();
+        for (Cart c : all) {
+            if (c != null && c.getStatus() != null && c.getStatus() == 1) {
+                ordered.add(c);
+            }
+        }
+        return ordered;
+    }
+
+    public List<Cart> getUserDroppedCarts(String userId) throws SQLException {
+        List<Cart> all = getUserCartHistory(userId);
+        List<Cart> dropped = new ArrayList<>();
+        for (Cart c : all) {
+            if (c != null && c.getStatus() != null && c.getStatus() == 0) {
+                dropped.add(c);
+            }
+        }
+        return dropped;
     }
 
     public void recalculateCartPrice(String cartId) {

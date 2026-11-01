@@ -1,0 +1,199 @@
+{
+  "info": {
+    "_postman_id": "a1b2c3d4-e5f6-7890-abcd-ef0123456789",
+    "name": "Java231 - Cart Ordered & Dropped API (Д.З.)",
+    "description": "Колекція Postman для домашнього завдання: точки /cart/ordered (лише замовлені кошики, status: 1) та /cart/dropped (лише скасовані кошики, status: 0).",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "host",
+      "value": "http://localhost:8080/java231web",
+      "type": "string"
+    },
+    {
+      "key": "user6",
+      "value": "024ad494-bafd-11f1-9d1a-84ba59d7b864",
+      "type": "string",
+      "description": "Токен авторизованого користувача"
+    }
+  ],
+  "item": [
+    {
+      "name": "1. GET /cart/ordered - Only Ordered Carts (200 OK)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status code is 200 OK', function () {",
+              "    pm.response.to.have.status(200);",
+              "});",
+              "pm.test('Response contains array data type', function () {",
+              "    var jsonData = pm.response.json();",
+              "    pm.expect(jsonData.status.code).to.eql(200);",
+              "    pm.expect(jsonData.meta.dataType).to.eql('array');",
+              "    pm.expect(Array.isArray(jsonData.data)).to.be.true;",
+              "});",
+              "pm.test('All returned carts are ordered (status == 1) and not dropped or active', function () {",
+              "    var jsonData = pm.response.json();",
+              "    pm.expect(jsonData.data.length).to.be.above(0);",
+              "    jsonData.data.forEach(function (cart) {",
+              "        pm.expect(cart.status).to.eql(1);",
+              "        pm.expect(cart.closeAt).to.not.be.null;",
+              "    });",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{user6}}",
+            "type": "text"
+          }
+        ],
+        "url": {
+          "raw": "{{host}}/cart/ordered",
+          "host": [
+            "{{host}}"
+          ],
+          "path": [
+            "cart",
+            "ordered"
+          ]
+        },
+        "description": "Повертає історію лише замовлених кошиків (cart_status == 1), без видалених і без активних."
+      },
+      "response": []
+    },
+    {
+      "name": "2. GET /cart/dropped - Only Dropped Carts (200 OK)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status code is 200 OK', function () {",
+              "    pm.response.to.have.status(200);",
+              "});",
+              "pm.test('Response contains array data type', function () {",
+              "    var jsonData = pm.response.json();",
+              "    pm.expect(jsonData.status.code).to.eql(200);",
+              "    pm.expect(jsonData.meta.dataType).to.eql('array');",
+              "    pm.expect(Array.isArray(jsonData.data)).to.be.true;",
+              "});",
+              "pm.test('All returned carts are dropped (status == 0) and not ordered or active', function () {",
+              "    var jsonData = pm.response.json();",
+              "    pm.expect(jsonData.data.length).to.be.above(0);",
+              "    jsonData.data.forEach(function (cart) {",
+              "        pm.expect(cart.status).to.eql(0);",
+              "        pm.expect(cart.closeAt).to.not.be.null;",
+              "    });",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{user6}}",
+            "type": "text"
+          }
+        ],
+        "url": {
+          "raw": "{{host}}/cart/dropped",
+          "host": [
+            "{{host}}"
+          ],
+          "path": [
+            "cart",
+            "dropped"
+          ]
+        },
+        "description": "Повертає скасовані (видалені) замовлення (cart_status == 0), без придбаних і без активних."
+      },
+      "response": []
+    },
+    {
+      "name": "3. GET /cart/ordered - Unauthorized (401 Unauthorized)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status code is 401 Unauthorized', function () {",
+              "    pm.response.to.have.status(401);",
+              "});",
+              "pm.test('Response indicates unauthorized', function () {",
+              "    var jsonData = pm.response.json();",
+              "    pm.expect(jsonData.status.code).to.eql(401);",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{host}}/cart/ordered",
+          "host": [
+            "{{host}}"
+          ],
+          "path": [
+            "cart",
+            "ordered"
+          ]
+        },
+        "description": "Запит без авторизації повертає 401 Unauthorized"
+      },
+      "response": []
+    },
+    {
+      "name": "4. GET /cart/dropped - Unauthorized (401 Unauthorized)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status code is 401 Unauthorized', function () {",
+              "    pm.response.to.have.status(401);",
+              "});",
+              "pm.test('Response indicates unauthorized', function () {",
+              "    var jsonData = pm.response.json();",
+              "    pm.expect(jsonData.status.code).to.eql(401);",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{host}}/cart/dropped",
+          "host": [
+            "{{host}}"
+          ],
+          "path": [
+            "cart",
+            "dropped"
+          ]
+        },
+        "description": "Запит без авторизації повертає 401 Unauthorized"
+      },
+      "response": []
+    }
+  ]
+}

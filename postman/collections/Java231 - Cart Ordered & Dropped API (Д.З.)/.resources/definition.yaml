@@ -1,0 +1,5 @@
+$kind: collection
+description: "Колекція Postman для домашнього завдання: точки /cart/ordered (лише замовлені кошики, status: 1) та /cart/dropped (лише скасовані кошики, status: 0)."
+variables:
+  host: http://localhost:8080/java231web
+  user6: 024ad494-bafd-11f1-9d1a-84ba59d7b864

@@ -1,0 +1,29 @@
+$kind: http-request
+name: 2. GET /cart/dropped - Only Dropped Carts (200 OK)
+description: Повертає скасовані (видалені) замовлення (cart_status == 0), без придбаних і без активних.
+url: "{{host}}/cart/dropped"
+method: GET
+headers:
+  Authorization: Bearer {{user6}}
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test('Status code is 200 OK', function () {
+          pm.response.to.have.status(200);
+      });
+      pm.test('Response contains array data type', function () {
+          var jsonData = pm.response.json();
+          pm.expect(jsonData.status.code).to.eql(200);
+          pm.expect(jsonData.meta.dataType).to.eql('array');
+          pm.expect(Array.isArray(jsonData.data)).to.be.true;
+      });
+      pm.test('All returned carts are dropped (status == 0) and not ordered or active', function () {
+          var jsonData = pm.response.json();
+          pm.expect(jsonData.data.length).to.be.above(0);
+          jsonData.data.forEach(function (cart) {
+              pm.expect(cart.status).to.eql(0);
+              pm.expect(cart.closeAt).to.not.be.null;
+          });
+      });
+    language: text/javascript
+order: 2000

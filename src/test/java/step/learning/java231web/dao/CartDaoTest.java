@@ -2,6 +2,7 @@ package step.learning.java231web.dao;
 
 import org.junit.jupiter.api.Test;
 import step.learning.java231web.data.dao.CartDao;
+import step.learning.java231web.data.dao.TokenDao;
 import step.learning.java231web.data.dto.Cart;
 import step.learning.java231web.data.dto.CartItem;
 import step.learning.java231web.services.db.IDbService;
@@ -78,5 +79,25 @@ public class CartDaoTest {
         assertEquals("prod-1", item.getProductId());
         assertEquals(2, item.getCount());
         assertEquals(150.0, item.getPrice());
+    }
+
+    @Test
+    public void testGetUserOrderedAndDroppedCarts() throws Exception {
+        CartDao cartDao = new CartDao(null);
+        java.util.List<Cart> ordered = cartDao.getUserOrderedCarts(TokenDao.DEMO_USER_ID);
+        assertNotNull(ordered);
+        assertFalse(ordered.isEmpty());
+        for (Cart c : ordered) {
+            assertNotNull(c.getStatus());
+            assertEquals(1, c.getStatus());
+        }
+
+        java.util.List<Cart> dropped = cartDao.getUserDroppedCarts(TokenDao.DEMO_USER_ID);
+        assertNotNull(dropped);
+        assertFalse(dropped.isEmpty());
+        for (Cart c : dropped) {
+            assertNotNull(c.getStatus());
+            assertEquals(0, c.getStatus());
+        }
     }
 }
