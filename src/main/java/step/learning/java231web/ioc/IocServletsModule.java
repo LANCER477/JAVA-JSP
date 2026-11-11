@@ -26,7 +26,7 @@ public class IocServletsModule extends ServletModule {
         serve("/section", "/section/*").with( ProductSectionServlet.class );
         serve("/product", "/product/*").with( ProductServlet.class );
         serve("/storage", "/storage/*").with( StorageServlet.class );
-        serve("/cart", "/cart/*").with( CartServlet.class );
+        serve("/cart", "/cart/*", "/api/cart", "/api/cart/*").with( CartServlet.class );
     }
 
 }

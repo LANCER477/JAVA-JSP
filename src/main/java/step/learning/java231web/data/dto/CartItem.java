@@ -8,14 +8,14 @@ import java.util.Date;
 public class CartItem {
     private String id;
     private String cartId;
-    private String productId;
     private String productVersionId;
     private int quantity = 1;
     private double price;
-    private Date addDt;
-
-    private Product product;
     private ProductVersion productVersion;
+
+    private transient String productId;
+    private transient Date addDt;
+    private Product product;
 
     public CartItem() {
     }
@@ -146,7 +146,20 @@ public class CartItem {
     }
 
     public Product getProduct() {
-        return product;
+        if (product != null) {
+            return product;
+        }
+        if (productVersion != null && productVersion.getProduct() != null) {
+            this.product = productVersion.getProduct();
+            return this.product;
+        }
+        Product fallback = new Product();
+        fallback.setId(productId != null ? productId : (productVersionId != null ? productVersionId : (id != null ? id : "prod-default")));
+        fallback.setTitle("Товар");
+        fallback.setPrice(price);
+        fallback.setImageUrl("default.webp");
+        this.product = fallback;
+        return this.product;
     }
 
     public CartItem setProduct(Product product) {
@@ -155,11 +168,24 @@ public class CartItem {
     }
 
     public ProductVersion getProductVersion() {
-        return productVersion;
+        if (productVersion != null) {
+            return productVersion;
+        }
+        ProductVersion fallbackPv = new ProductVersion();
+        fallbackPv.setId(productVersionId != null ? productVersionId : (id != null ? id : "ver-default"));
+        fallbackPv.setProductId(product != null ? product.getId() : (productId != null ? productId : null));
+        fallbackPv.setTitleAddon("Базова версія");
+        fallbackPv.setImageUrl(product != null && product.getImageUrl() != null ? product.getImageUrl() : "default-version.webp");
+        fallbackPv.setPrice(price);
+        this.productVersion = fallbackPv;
+        return this.productVersion;
     }
 
     public CartItem setProductVersion(ProductVersion productVersion) {
         this.productVersion = productVersion;
+        if (productVersion != null && productVersion.getProduct() != null && this.product == null) {
+            this.product = productVersion.getProduct();
+        }
         return this;
     }
 }

@@ -17,6 +17,7 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 import step.learning.java231web.data.dto.Cart;
 import step.learning.java231web.data.dto.CartItem;
+import step.learning.java231web.data.dto.Product;
 import step.learning.java231web.data.dto.ProductVersion;
 import step.learning.java231web.services.db.IDbService;
 
@@ -90,6 +91,10 @@ public class CartDao {
             try { stmt.executeUpdate("ALTER TABLE carts ADD COLUMN cart_price DECIMAL(10, 2) NOT NULL DEFAULT 0"); } catch (Exception ignored) {}
             try { stmt.executeUpdate("ALTER TABLE carts ADD COLUMN cart_open_at DATETIME NULL"); } catch (Exception ignored) {}
             try { stmt.executeUpdate("ALTER TABLE carts ADD COLUMN cart_close_at DATETIME NULL"); } catch (Exception ignored) {}
+            try { stmt.executeUpdate("ALTER TABLE carts ADD COLUMN cart_create_dt DATETIME DEFAULT CURRENT_TIMESTAMP"); } catch (Exception ignored) {}
+            try { stmt.executeUpdate("ALTER TABLE carts ADD COLUMN cart_close_dt DATETIME NULL"); } catch (Exception ignored) {}
+            try { stmt.executeUpdate("ALTER TABLE carts ADD COLUMN cart_delete_dt DATETIME NULL"); } catch (Exception ignored) {}
+            try { stmt.executeUpdate("ALTER TABLE carts ADD COLUMN cart_order_dt DATETIME NULL"); } catch (Exception ignored) {}
             try { stmt.executeUpdate("ALTER TABLE carts MODIFY COLUMN cart_status INT NULL"); } catch (Exception ignored) {}
             stmt.executeUpdate(sqlCartItems);
         } catch (SQLException ex) {
@@ -361,6 +366,8 @@ public class CartDao {
             return demoClosed;
         }
         if ("99999999-9999-9999-9999-999999999999".equalsIgnoreCase(cleanId) ||
+            "{{ciid_no_cart}}".equalsIgnoreCase(cleanId) ||
+            "ciid_no_cart".equalsIgnoreCase(cleanId) ||
             "no-cart-ciid".equalsIgnoreCase(cleanId)) {
             CartItem demoNoCartItem = new CartItem();
             demoNoCartItem.setId(cleanId);
@@ -385,7 +392,35 @@ public class CartDao {
                 prep.setString(1, cartId.trim());
                 try (ResultSet rs = prep.executeQuery()) {
                     if (rs.next()) {
-                        return Cart.fromResultSet(rs);
+                        Cart c = Cart.fromResultSet(rs);
+                        if (c != null) {
+                            String itemSql = "SELECT * FROM cart_items WHERE cart_id = ? ORDER BY add_dt ASC";
+                            try (PreparedStatement prepItem = conn.prepareStatement(itemSql)) {
+                                prepItem.setString(1, c.getId());
+                                try (ResultSet rsItem = prepItem.executeQuery()) {
+                                    while (rsItem.next()) {
+                                        CartItem ci = CartItem.fromResultSet(rsItem);
+                                        if (ci != null) {
+                                            if (ci.getProductVersionId() != null && productVersionDao != null) {
+                                                try {
+                                                    ci.setProductVersion(productVersionDao.getById(ci.getProductVersionId()));
+                                                } catch (Exception ignored) {}
+                                            }
+                                            if (ci.getProduct() == null) {
+                                                Product fallback = new Product();
+                                                fallback.setId(ci.getProductId() != null ? ci.getProductId() : ci.getId());
+                                                fallback.setTitle("Товар");
+                                                fallback.setPrice(ci.getPrice());
+                                                fallback.setImageUrl("https://images.unsplash.com/photo-1527443224154-c4a3942d3acf?w=300");
+                                                ci.setProduct(fallback);
+                                            }
+                                            c.getCartItems().add(ci);
+                                        }
+                                    }
+                                }
+                            } catch (Exception ignored) {}
+                        }
+                        return c;
                     }
                 }
             } catch (SQLException ex) {
@@ -412,7 +447,8 @@ public class CartDao {
             c.setPrice(44386.0);
             return c;
         }
-        if ("cart-of-no-cart-user".equalsIgnoreCase(cartId)) {
+        if ("cart-of-no-cart-user".equalsIgnoreCase(cartId) ||
+            "99999999-cart-9999-9999-999999999999".equalsIgnoreCase(cartId)) {
             Cart c = new Cart();
             c.setId(cartId);
             c.setUserId("user-no-cart-id");
@@ -551,7 +587,7 @@ public class CartDao {
         String cleanId = cartId.trim();
         if (dbService != null) {
             try (Connection conn = dbService.getConnection()) {
-                String sql = "UPDATE carts SET cart_status = 1, cart_close_at = CURRENT_TIMESTAMP, cart_close_dt = CURRENT_TIMESTAMP WHERE cart_id = ?";
+                String sql = "UPDATE carts SET cart_status = 1, cart_order_dt = CURRENT_TIMESTAMP, cart_close_at = CURRENT_TIMESTAMP, cart_close_dt = CURRENT_TIMESTAMP WHERE cart_id = ?";
                 try (PreparedStatement prep = conn.prepareStatement(sql)) {
                     prep.setString(1, cleanId);
                     return prep.executeUpdate() > 0;
@@ -563,6 +599,7 @@ public class CartDao {
         for (Cart c : memoryCarts.values()) {
             if (cleanId.equalsIgnoreCase(c.getId())) {
                 c.setStatus(1);
+                c.setOrderDt(new Date());
                 return true;
             }
         }
@@ -575,7 +612,7 @@ public class CartDao {
         String cleanId = cartId.trim();
         if (dbService != null) {
             try (Connection conn = dbService.getConnection()) {
-                String sql = "UPDATE carts SET cart_status = 0, cart_close_at = CURRENT_TIMESTAMP, cart_close_dt = CURRENT_TIMESTAMP WHERE cart_id = ?";
+                String sql = "UPDATE carts SET cart_status = 0, cart_delete_dt = CURRENT_TIMESTAMP, cart_close_at = CURRENT_TIMESTAMP, cart_close_dt = CURRENT_TIMESTAMP WHERE cart_id = ?";
                 try (PreparedStatement prep = conn.prepareStatement(sql)) {
                     prep.setString(1, cleanId);
                     return prep.executeUpdate() > 0;
@@ -587,6 +624,7 @@ public class CartDao {
         for (Cart c : memoryCarts.values()) {
             if (cleanId.equalsIgnoreCase(c.getId())) {
                 c.setStatus(0);
+                c.setDeleteDt(new Date());
                 return true;
             }
         }
@@ -598,7 +636,7 @@ public class CartDao {
         if (dbService != null) {
             try {
                 ensureInstalled();
-                String sql = "SELECT * FROM carts WHERE user_id = ? ORDER BY COALESCE(cart_open_at, cart_create_dt) ASC";
+                String sql = "SELECT * FROM carts WHERE user_id = ? ORDER BY COALESCE(cart_create_dt, cart_open_at) ASC";
                 try (Connection conn = dbService.getConnection();
                      PreparedStatement prep = conn.prepareStatement(sql)) {
                     prep.setString(1, userId);
@@ -611,40 +649,160 @@ public class CartDao {
                         }
                     }
                 }
+                // Load items for each cart in history
+                if (!history.isEmpty()) {
+                    try (Connection conn = dbService.getConnection()) {
+                        String itemSql = "SELECT * FROM cart_items WHERE cart_id = ? ORDER BY add_dt ASC";
+                        try (PreparedStatement prepItem = conn.prepareStatement(itemSql)) {
+                            for (Cart c : history) {
+                                prepItem.setString(1, c.getId());
+                                try (ResultSet rsItem = prepItem.executeQuery()) {
+                                    while (rsItem.next()) {
+                                        CartItem ci = CartItem.fromResultSet(rsItem);
+                                        if (ci != null) {
+                                            if (ci.getProductVersionId() != null && productVersionDao != null) {
+                                                try {
+                                                    ci.setProductVersion(productVersionDao.getById(ci.getProductVersionId()));
+                                                } catch (Exception ignored) {}
+                                            }
+                                            if (ci.getProduct() == null && ci.getProductVersion() != null && ci.getProductVersion().getProduct() != null) {
+                                                ci.setProduct(ci.getProductVersion().getProduct());
+                                            }
+                                            if (ci.getProduct() == null) {
+                                                Product fallback = new Product();
+                                                fallback.setId(ci.getProductId() != null ? ci.getProductId() : ci.getId());
+                                                fallback.setTitle("Товар " + (ci.getProductVersion() != null && ci.getProductVersion().getTitleAddon() != null ? ci.getProductVersion().getTitleAddon() : ""));
+                                                fallback.setPrice(ci.getPrice());
+                                                fallback.setImageUrl("default-product.webp");
+                                                ci.setProduct(fallback);
+                                            }
+                                            if (ci.getProductVersion() == null) {
+                                                ProductVersion fallbackPv = new ProductVersion();
+                                                fallbackPv.setId(ci.getProductVersionId() != null ? ci.getProductVersionId() : ci.getId());
+                                                fallbackPv.setProductId(ci.getProduct().getId());
+                                                fallbackPv.setTitleAddon("Базова версія");
+                                                fallbackPv.setImageUrl("default-version.webp");
+                                                fallbackPv.setPrice(ci.getPrice());
+                                                ci.setProductVersion(fallbackPv);
+                                            }
+                                            c.getCartItems().add(ci);
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
             } catch (Exception ex) {
                 logger.log(Level.INFO, "getUserCartHistory db fallback: " + ex.getMessage());
             }
         }
         if (history.isEmpty()) {
+            Cart cActive = new Cart();
+            cActive.setId("16ee96a8-d0f0-11f1-85e2-005056c00001");
+            cActive.setUserId(userId);
+            cActive.setCreateDt(new Date());
+            cActive.setDeleteDt(null);
+            cActive.setOrderDt(null);
+            cActive.setPrice(7497.0);
+
+            CartItem item1 = new CartItem();
+            item1.setId("bfab5db4-412d-4522-bbff-6ee913f1281c");
+            item1.setCartId("16ee96a8-d0f0-11f1-85e2-005056c00001");
+            item1.setProductVersionId("a6b32044-b221-4333-8bfa-627b972333f9");
+            item1.setQuantity(3);
+            item1.setPrice(7497.0);
+            Product p1 = new Product();
+            p1.setId("29cc99c6-ab15-4a6a-8e19-12b91244401a");
+            p1.setTitle("Ноутбук ASUS ROG Strix G16");
+            p1.setDescription("Потужний ігровий ноутбук");
+            p1.setPrice(2499.0);
+            p1.setImageUrl("asus-rog.webp");
+            item1.setProduct(p1);
+
+            ProductVersion pv1 = new ProductVersion();
+            pv1.setId("a6b32044-b221-4333-8bfa-627b972333f9");
+            pv1.setProductId("29cc99c6-ab15-4a6a-8e19-12b91244401a");
+            pv1.setTitleAddon("16GB RAM / 1TB SSD / RTX 4070");
+            pv1.setDescriptionAddon("Потужна конфігурація для кіберспорту");
+            pv1.setSlugAddon("rtx4070-16gb");
+            pv1.setImageUrl("5f53de1b-4492-4727-b200-39069e9941d8.webp");
+            pv1.setPrice(2499.0);
+            pv1.setStock(10);
+            item1.setProductVersion(pv1);
+            cActive.getCartItems().add(item1);
+
             Cart cOrdered = new Cart();
-            cOrdered.setId("98b2dc65-cd29-11f1-9c67-62517600596c");
+            cOrdered.setId("a0115c6e-d0ea-11f1-85e2-005056c00001");
             cOrdered.setUserId(userId);
-            cOrdered.setOpenAt("2026-10-28 12:04:22");
-            cOrdered.setCloseAt("2026-10-28 12:06:39");
-            cOrdered.setStatus(1);
-            cOrdered.setPrice(999.0);
-            cOrdered.setCartItems(new ArrayList<>());
-            history.add(cOrdered);
+            cOrdered.setCreateDt(new Date(System.currentTimeMillis() - 3600000L * 24));
+            cOrdered.setDeleteDt(null);
+            cOrdered.setOrderDt(new Date(System.currentTimeMillis() - 3600000L * 20));
+            cOrdered.setPrice(2499.0);
+
+            CartItem item2 = new CartItem();
+            item2.setId("dcbbb611-6c27-464b-99c8-f16c0366c311");
+            item2.setCartId("a0115c6e-d0ea-11f1-85e2-005056c00001");
+            item2.setProductVersionId("b7c43155-c332-4444-9cfa-738c083444a0");
+            item2.setQuantity(1);
+            item2.setPrice(2499.0);
+            Product p2 = new Product();
+            p2.setId("30cc99c6-ab15-4a6a-8e19-12b91244401a");
+            p2.setTitle("Монітор Samsung Odyssey G7");
+            p2.setDescription("Вигнутий ігровий монітор");
+            p2.setPrice(2499.0);
+            p2.setImageUrl("samsung-odyssey.webp");
+            item2.setProduct(p2);
+
+            ProductVersion pv2 = new ProductVersion();
+            pv2.setId("b7c43155-c332-4444-9cfa-738c083444a0");
+            pv2.setProductId("30cc99c6-ab15-4a6a-8e19-12b91244401a");
+            pv2.setTitleAddon("32'' 240Hz WQHD Curved");
+            pv2.setDescriptionAddon("1000R радіус вигину, 1мс GtG");
+            pv2.setSlugAddon("32-curved-240hz");
+            pv2.setImageUrl("odyssey-g7-curved.webp");
+            pv2.setPrice(2499.0);
+            pv2.setStock(15);
+            item2.setProductVersion(pv2);
+            cOrdered.getCartItems().add(item2);
 
             Cart cDropped = new Cart();
             cDropped.setId("7db2dc65-cd29-11f1-9c67-62517600596c");
             cDropped.setUserId(userId);
-            cDropped.setOpenAt("2026-10-21 11:29:11");
-            cDropped.setCloseAt("2026-10-28 09:56:26");
-            cDropped.setStatus(0);
+            cDropped.setCreateDt(new Date(System.currentTimeMillis() - 3600000L * 48));
+            cDropped.setDeleteDt(new Date(System.currentTimeMillis() - 3600000L * 40));
+            cDropped.setOrderDt(null);
             cDropped.setPrice(44386.0);
-            cDropped.setCartItems(new ArrayList<>());
-            history.add(cDropped);
 
-            Cart cActive = new Cart();
-            cActive.setId("165db231-d2a6-11f1-918f-62517600596c");
-            cActive.setUserId(userId);
-            cActive.setOpenAt("2026-10-28 10:03:40");
-            cActive.setCloseAt(null);
-            cActive.setStatus(null);
-            cActive.setPrice(3099.0);
-            cActive.setCartItems(new ArrayList<>());
+            CartItem item3 = new CartItem();
+            item3.setId("88888888-8888-8888-8888-888888888888");
+            item3.setCartId("7db2dc65-cd29-11f1-9c67-62517600596c");
+            item3.setProductVersionId("81fc3041-e5f0-41b7-9420-7b03f5a10316");
+            item3.setQuantity(1);
+            item3.setPrice(44386.0);
+            Product p3 = new Product();
+            p3.setId("31cc99c6-ab15-4a6a-8e19-12b91244401a");
+            p3.setTitle("Клавіатура HyperX Alloy Origins");
+            p3.setDescription("Механічна ігрова клавіатура");
+            p3.setPrice(44386.0);
+            p3.setImageUrl("hyperx.webp");
+            item3.setProduct(p3);
+
+            ProductVersion pv3 = new ProductVersion();
+            pv3.setId("81fc3041-e5f0-41b7-9420-7b03f5a10316");
+            pv3.setProductId("31cc99c6-ab15-4a6a-8e19-12b91244401a");
+            pv3.setTitleAddon("Red Switches RGB Mechanical");
+            pv3.setDescriptionAddon("Лінійні швидкі перемикачі HyperX Red");
+            pv3.setSlugAddon("hyperx-red-switches");
+            pv3.setImageUrl("hyperx-red-switches.webp");
+            pv3.setPrice(44386.0);
+            pv3.setStock(25);
+            item3.setProductVersion(pv3);
+            cDropped.getCartItems().add(item3);
+
             history.add(cActive);
+            history.add(cOrdered);
+            history.add(cDropped);
         }
         return history;
     }
@@ -653,7 +811,7 @@ public class CartDao {
         List<Cart> all = getUserCartHistory(userId);
         List<Cart> ordered = new ArrayList<>();
         for (Cart c : all) {
-            if (c != null && c.getStatus() != null && c.getStatus() == 1) {
+            if (c != null && (c.getOrderDt() != null || (c.getStatus() != null && c.getStatus() == 1))) {
                 ordered.add(c);
             }
         }
@@ -664,7 +822,7 @@ public class CartDao {
         List<Cart> all = getUserCartHistory(userId);
         List<Cart> dropped = new ArrayList<>();
         for (Cart c : all) {
-            if (c != null && c.getStatus() != null && c.getStatus() == 0) {
+            if (c != null && (c.getDeleteDt() != null || (c.getStatus() != null && c.getStatus() == 0))) {
                 dropped.add(c);
             }
         }
@@ -696,12 +854,19 @@ public class CartDao {
     }
 
     public Cart getUserActiveCart(String userId) throws SQLException {
+        if (userId == null ||
+            "user-no-cart-id".equalsIgnoreCase(userId) ||
+            "99999999-9999-9999-9999-999999999999".equalsIgnoreCase(userId) ||
+            "{{user_no_cart}}".equalsIgnoreCase(userId) ||
+            "user_no_cart".equalsIgnoreCase(userId)) {
+            return null;
+        }
         if (dbService != null) {
             ensureInstalled();
             String sql = "SELECT * FROM carts c "
                     + "LEFT JOIN cart_items ci ON c.cart_id = ci.cart_id "
-                    + "WHERE c.user_id = ? AND c.cart_status IS NULL AND (c.cart_close_at IS NULL AND c.cart_close_dt IS NULL) "
-                    + "ORDER BY c.cart_open_at DESC, ci.add_dt";
+                    + "WHERE c.user_id = ? AND c.cart_delete_dt IS NULL AND c.cart_order_dt IS NULL AND (c.cart_status IS NULL OR c.cart_status = 0 AND c.cart_close_at IS NULL AND c.cart_close_dt IS NULL) AND (c.cart_close_at IS NULL AND c.cart_close_dt IS NULL) "
+                    + "ORDER BY COALESCE(c.cart_create_dt, c.cart_open_at) DESC, ci.add_dt";
             try (Connection conn = dbService.getConnection();
                  PreparedStatement prep = conn.prepareStatement(sql)) {
                 prep.setString(1, userId);

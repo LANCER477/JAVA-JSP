@@ -7,12 +7,15 @@ import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
+import java.util.Objects;
 
 public class Cart {
     private String id;
     private String userId;
     private String openAt;
     private String closeAt;
+    private String deleteDt;
+    private String orderDt;
     private Integer status; // null for active cart, 0/1 for closed
     private double price;
     private List<CartItem> cartItems = new ArrayList<>();
@@ -135,7 +138,10 @@ public class Cart {
     }
 
     public String getCloseAt() {
-        return closeAt;
+        if (closeAt != null) return closeAt;
+        if (orderDt != null) return orderDt;
+        if (deleteDt != null) return deleteDt;
+        return null;
     }
 
     public Cart setCloseAt(String closeAt) {
@@ -144,12 +150,22 @@ public class Cart {
     }
 
     public Date getClosedAt() {
-        if (closeAt == null) return null;
-        try {
-            return new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").parse(closeAt);
-        } catch (Exception e) {
-            return null;
+        if (closeAt != null) {
+            try {
+                return new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").parse(closeAt);
+            } catch (Exception ignored) {}
         }
+        String dt = orderDt != null ? orderDt : deleteDt;
+        if (dt != null) {
+            try {
+                return new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss").parse(dt);
+            } catch (Exception e1) {
+                try {
+                    return new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").parse(dt);
+                } catch (Exception ignored) {}
+            }
+        }
+        return null;
     }
 
     public Cart setClosedAt(Date closedAt) {
@@ -162,7 +178,10 @@ public class Cart {
     }
 
     public Integer getStatus() {
-        return status;
+        if (status != null) return status;
+        if (orderDt != null) return 1;
+        if (deleteDt != null) return 0;
+        return null;
     }
 
     public Cart setStatus(Integer status) {
@@ -194,5 +213,49 @@ public class Cart {
 
     public Cart setItems(List<CartItem> items) {
         return setCartItems(items);
+    }
+
+    public Date getCreateDt() {
+        return getCreatedAt();
+    }
+
+    public Cart setCreateDt(Date d) {
+        return setCreatedAt(d);
+    }
+
+    public Date getDeleteDt() {
+        return Objects.equals(status, 0) ? getClosedAt() : null;
+    }
+
+    public Cart setDeleteDt(Date d) {
+        if (d != null) {
+            setStatus(0);
+            setClosedAt(d);
+        } else if (Objects.equals(status, 0)) {
+            setClosedAt(null);
+        }
+        return this;
+    }
+
+    public Date getOrderDt() {
+        return Objects.equals(status, 1) ? getClosedAt() : null;
+    }
+
+    public Cart setOrderDt(Date d) {
+        if (d != null) {
+            setStatus(1);
+            setClosedAt(d);
+        } else if (Objects.equals(status, 1)) {
+            setClosedAt(null);
+        }
+        return this;
+    }
+
+    public Date getCloseAtDate() {
+        return getClosedAt();
+    }
+
+    public Date getOpenAtDate() {
+        return getCreatedAt();
     }
 }

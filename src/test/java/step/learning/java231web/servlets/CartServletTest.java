@@ -1042,13 +1042,71 @@ public class CartServletTest {
 
         servlet.service(request, response);
         assertEquals(200, statusCode.get());
-        RestResponse resp = new Gson().fromJson(stringWriter.toString(), RestResponse.class);
+
+        String jsonString = stringWriter.toString();
+        assertTrue(jsonString.contains("\"cartItems\":"));
+        assertTrue(jsonString.contains("\"createDt\":"));
+        assertTrue(jsonString.contains("\"deleteDt\":"));
+        assertTrue(jsonString.contains("\"orderDt\":"));
+        assertFalse(jsonString.contains("\"userId\":"));
+        assertFalse(jsonString.contains("\"openAt\":"));
+        assertFalse(jsonString.contains("\"closeAt\":"));
+
+        RestResponse resp = new Gson().fromJson(jsonString, RestResponse.class);
         assertNotNull(resp);
         assertEquals(200, resp.getStatus().getCode());
         assertNotNull(resp.getMeta());
         assertEquals("array", resp.getMeta().getDataType());
         assertNotNull(resp.getData());
         assertTrue(resp.getData() instanceof java.util.List);
+    }
+
+    @Test
+    public void testCartHistoryContainsFullImageUrlsForProductAndProductVersion() throws Exception {
+        CartDao fakeCartDao = new CartDao(null);
+        TokenDao fakeTokenDao = new TokenDao(null);
+        Gson gson = new GsonBuilder().serializeNulls().create();
+        CartServlet servlet = new CartServlet(fakeCartDao, fakeTokenDao, gson);
+
+        StringWriter stringWriter = new StringWriter();
+        PrintWriter printWriter = new PrintWriter(stringWriter);
+        AtomicInteger statusCode = new AtomicInteger(200);
+
+        HttpServletRequest request = (HttpServletRequest) Proxy.newProxyInstance(
+                HttpServletRequest.class.getClassLoader(),
+                new Class<?>[]{HttpServletRequest.class},
+                (proxy, method, args) -> {
+                    if ("getMethod".equals(method.getName())) return "GET";
+                    if ("getPathInfo".equals(method.getName())) return "/history";
+                    if ("getServerName".equals(method.getName())) return "localhost";
+                    if ("getServerPort".equals(method.getName())) return 8080;
+                    if ("getScheme".equals(method.getName())) return "http";
+                    if ("getContextPath".equals(method.getName())) return "/java231web";
+                    if ("getHeader".equals(method.getName()) && "Authorization".equals(args[0])) {
+                        return "Bearer " + TokenDao.DEMO_TOKEN_ID;
+                    }
+                    if ("getWriter".equals(method.getName())) return printWriter;
+                    return null;
+                }
+        );
+        HttpServletResponse response = (HttpServletResponse) Proxy.newProxyInstance(
+                HttpServletResponse.class.getClassLoader(),
+                new Class<?>[]{HttpServletResponse.class},
+                (proxy, method, args) -> {
+                    if ("setStatus".equals(method.getName()) && args != null && args.length > 0) {
+                        statusCode.set((Integer) args[0]);
+                    }
+                    if ("getWriter".equals(method.getName())) return printWriter;
+                    return null;
+                }
+        );
+
+        servlet.service(request, response);
+        assertEquals(200, statusCode.get());
+
+        String jsonString = stringWriter.toString();
+        assertTrue(jsonString.contains("http://localhost:8080/java231web/storage/"));
+        assertTrue(jsonString.contains("\"imageUrl\":"));
     }
 
     @Test
@@ -1197,9 +1255,10 @@ public class CartServletTest {
 
         java.util.List<?> list = (java.util.List<?>) resp.getData();
         assertFalse(list.isEmpty());
+        Gson cartGson = CartServlet.buildCartGson();
         for (Object item : list) {
-            String itemJson = gson.toJson(item);
-            Cart c = gson.fromJson(itemJson, Cart.class);
+            String itemJson = cartGson.toJson(item);
+            Cart c = cartGson.fromJson(itemJson, Cart.class);
             assertNotNull(c.getStatus());
             assertEquals(1, c.getStatus());
             assertNotNull(c.getCloseAt());
@@ -1255,9 +1314,10 @@ public class CartServletTest {
 
         java.util.List<?> list = (java.util.List<?>) resp.getData();
         assertFalse(list.isEmpty());
+        Gson cartGson = CartServlet.buildCartGson();
         for (Object item : list) {
-            String itemJson = gson.toJson(item);
-            Cart c = gson.fromJson(itemJson, Cart.class);
+            String itemJson = cartGson.toJson(item);
+            Cart c = cartGson.fromJson(itemJson, Cart.class);
             assertNotNull(c.getStatus());
             assertEquals(0, c.getStatus());
             assertNotNull(c.getCloseAt());

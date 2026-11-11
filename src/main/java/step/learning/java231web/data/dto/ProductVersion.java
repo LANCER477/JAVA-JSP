@@ -19,7 +19,7 @@ public class ProductVersion {
     private double price;
     private long stock;
 
-    private Product product;
+    private transient Product product;
 
     public ProductVersion() {
     }

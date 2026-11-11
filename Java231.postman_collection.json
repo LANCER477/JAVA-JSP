@@ -16,6 +16,11 @@
 			"type": "string"
 		},
 		{
+			"key": "user1",
+			"value": "024ad494-bafd-11f1-9d1a-84ba59d7b864",
+			"type": "string"
+		},
+		{
 			"key": "user2",
 			"value": "024ad494-bafd-11f1-9d1a-84ba59d7b864",
 			"type": "string"
@@ -74,6 +79,40 @@
 					"response": []
 				},
 				{
+					"name": "Cart History",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{user1}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{host}}/cart/history",
+							"host": [
+								"{{host}}"
+							],
+							"path": [
+								"cart",
+								"history"
+							]
+						}
+					},
+					"response": []
+				},
+				{
 					"name": "Active Cart Unauthorized",
 					"request": {
 						"auth": {
@@ -101,6 +140,74 @@
 							],
 							"path": [
 								"cart"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Dropped Carts",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{user1}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{host}}/cart/dropped",
+							"host": [
+								"{{host}}"
+							],
+							"path": [
+								"cart",
+								"dropped"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Ordered Carts",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{user1}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{host}}/cart/ordered",
+							"host": [
+								"{{host}}"
+							],
+							"path": [
+								"cart",
+								"ordered"
 							]
 						}
 					},

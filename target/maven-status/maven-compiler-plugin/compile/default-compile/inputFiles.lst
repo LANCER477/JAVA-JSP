@@ -11,6 +11,7 @@ C:\Users\maksi\Downloads\java231web-master\src\main\java\step\learning\java231we
 C:\Users\maksi\Downloads\java231web-master\src\main\java\step\learning\java231web\data\dto\ProductVersion.java
 C:\Users\maksi\Downloads\java231web-master\src\main\java\step\learning\java231web\data\dto\UserToken.java
 C:\Users\maksi\Downloads\java231web-master\src\main\java\step\learning\java231web\data\models\AdminProductViewModel.java
+C:\Users\maksi\Downloads\java231web-master\src\main\java\step\learning\java231web\data\models\CartTypeModel.java
 C:\Users\maksi\Downloads\java231web-master\src\main\java\step\learning\java231web\filters\AuthFilter.java
 C:\Users\maksi\Downloads\java231web-master\src\main\java\step\learning\java231web\filters\CorsFilter.java
 C:\Users\maksi\Downloads\java231web-master\src\main\java\step\learning\java231web\filters\EncodingFilter.java
@@ -18,6 +19,7 @@ C:\Users\maksi\Downloads\java231web-master\src\main\java\step\learning\java231we
 C:\Users\maksi\Downloads\java231web-master\src\main\java\step\learning\java231web\ioc\IocServicesModule.java
 C:\Users\maksi\Downloads\java231web-master\src\main\java\step\learning\java231web\ioc\IocServletsModule.java
 C:\Users\maksi\Downloads\java231web-master\src\main\java\step\learning\java231web\JakartaRestConfiguration.java
+C:\Users\maksi\Downloads\java231web-master\src\main\java\step\learning\java231web\models\CartTypeModel.java
 C:\Users\maksi\Downloads\java231web-master\src\main\java\step\learning\java231web\models\ProductFormModel.java
 C:\Users\maksi\Downloads\java231web-master\src\main\java\step\learning\java231web\models\ProductVersionFormModel.java
 C:\Users\maksi\Downloads\java231web-master\src\main\java\step\learning\java231web\models\SectionFormModel.java

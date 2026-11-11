@@ -2,8 +2,12 @@ package step.learning.java231web.servlets;
 
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
+import com.google.gson.JsonDeserializer;
+import com.google.gson.JsonNull;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
+import com.google.gson.JsonPrimitive;
+import com.google.gson.JsonSerializer;
 import com.google.inject.Inject;
 import com.google.inject.Singleton;
 import jakarta.servlet.ServletException;
@@ -13,8 +17,13 @@ import jakarta.servlet.http.HttpServletResponse;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.sql.SQLException;
+import java.text.SimpleDateFormat;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.Date;
+import java.util.Locale;
+import java.util.stream.Collectors;
+import step.learning.java231web.models.CartTypeModel;
 import step.learning.java231web.data.dao.CartDao;
 import step.learning.java231web.data.dao.ProductVersionDao;
 import step.learning.java231web.data.dao.TokenDao;
@@ -34,6 +43,31 @@ public class CartServlet extends HttpServlet {
     private final Gson gson;
     private final Gson restGson;
     private final RestMeta meta;
+
+    public static Gson buildCartGson() {
+        return new GsonBuilder()
+                .serializeNulls()
+                .registerTypeAdapter(Date.class, (JsonSerializer<Date>) (src, typeOfSrc, context) ->
+                        src == null ? JsonNull.INSTANCE : new JsonPrimitive(new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss", Locale.ROOT).format(src)))
+                .registerTypeAdapter(Date.class, (JsonDeserializer<Date>) (json, typeOfT, context) -> {
+                    if (json == null || json.isJsonNull()) return null;
+                    String s = json.getAsString();
+                    try {
+                        return new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss", Locale.ROOT).parse(s);
+                    } catch (Exception e1) {
+                        try {
+                            return new SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.ROOT).parse(s);
+                        } catch (Exception e2) {
+                            try {
+                                return new SimpleDateFormat("EEE MMM dd HH:mm:ss zzz yyyy", Locale.US).parse(s);
+                            } catch (Exception e3) {
+                                return null;
+                            }
+                        }
+                    }
+                })
+                .create();
+    }
 
     @Inject
     public CartServlet(CartDao cartDao, TokenDao tokenDao, ProductVersionDao productVersionDao) {
@@ -60,7 +94,7 @@ public class CartServlet extends HttpServlet {
         this.cartDao = cartDao;
         this.tokenDao = tokenDao;
         this.productVersionDao = productVersionDao;
-        this.gson = gson != null ? gson : new GsonBuilder().serializeNulls().create();
+        this.gson = buildCartGson();
         this.restGson = new Gson();
         this.meta = new RestMeta("API 'User carts'", "object");
         this.meta.setManipulations(Arrays.asList("GET", "POST", "DELETE", "PATCH"));
@@ -93,6 +127,10 @@ public class CartServlet extends HttpServlet {
         UserToken userToken = getUserToken(req);
 
         if (userToken != null) {
+            String baseUrl = (req != null && req.getServerName() != null)
+                    ? req.getScheme() + "://" + req.getServerName() + ":" + req.getServerPort() + req.getContextPath()
+                    : "http://localhost:8080/java231web";
+
             String pathInfo = req.getPathInfo();
             boolean isOrdered = (pathInfo != null && pathInfo.contains("ordered"))
                     || req.getParameter("ordered") != null;
@@ -111,8 +149,11 @@ public class CartServlet extends HttpServlet {
                 if (ordered == null) {
                     ordered = Collections.emptyList();
                 }
+                java.util.List<CartTypeModel> orderedModels = ordered.stream()
+                        .map(c -> CartTypeModel.fromCart(c, baseUrl))
+                        .collect(Collectors.toList());
                 RestMeta orderedMeta = createMeta(null, "array");
-                RestResponse okResponse = RestResponse.Ok(orderedMeta, ordered);
+                RestResponse okResponse = RestResponse.Ok(orderedMeta, orderedModels);
                 resp.setStatus(HttpServletResponse.SC_OK);
                 resp.getWriter().print(gson.toJson(okResponse));
                 return;
@@ -128,8 +169,11 @@ public class CartServlet extends HttpServlet {
                 if (dropped == null) {
                     dropped = Collections.emptyList();
                 }
+                java.util.List<CartTypeModel> droppedModels = dropped.stream()
+                        .map(c -> CartTypeModel.fromCart(c, baseUrl))
+                        .collect(Collectors.toList());
                 RestMeta droppedMeta = createMeta(null, "array");
-                RestResponse okResponse = RestResponse.Ok(droppedMeta, dropped);
+                RestResponse okResponse = RestResponse.Ok(droppedMeta, droppedModels);
                 resp.setStatus(HttpServletResponse.SC_OK);
                 resp.getWriter().print(gson.toJson(okResponse));
                 return;
@@ -145,11 +189,44 @@ public class CartServlet extends HttpServlet {
                 if (history == null) {
                     history = Collections.emptyList();
                 }
+                java.util.List<CartTypeModel> historyModels = history.stream()
+                        .map(c -> CartTypeModel.fromCart(c, baseUrl))
+                        .collect(Collectors.toList());
                 RestMeta historyMeta = createMeta(null, "array");
-                RestResponse okResponse = RestResponse.Ok(historyMeta, history);
+                RestResponse okResponse = RestResponse.Ok(historyMeta, historyModels);
                 resp.setStatus(HttpServletResponse.SC_OK);
                 resp.getWriter().print(gson.toJson(okResponse));
                 return;
+            }
+
+            String targetCartId = null;
+            if (pathInfo != null) {
+                String cleanPath = pathInfo.startsWith("/") ? pathInfo.substring(1) : pathInfo;
+                if (cleanPath.endsWith("/")) cleanPath = cleanPath.substring(0, cleanPath.length() - 1);
+                if (!cleanPath.isEmpty() && !cleanPath.equalsIgnoreCase("history") &&
+                        !cleanPath.equalsIgnoreCase("ordered") && !cleanPath.equalsIgnoreCase("dropped")) {
+                    targetCartId = cleanPath;
+                }
+            }
+
+            if (targetCartId != null) {
+                Cart specificCart = null;
+                if (cartDao != null) {
+                    try {
+                        specificCart = cartDao.getCartById(targetCartId);
+                    } catch (Exception ignored) {}
+                }
+                if (specificCart != null) {
+                    RestResponse okResponse = RestResponse.Ok(createMeta(null, "object"), CartTypeModel.fromCart(specificCart, baseUrl));
+                    resp.setStatus(HttpServletResponse.SC_OK);
+                    resp.getWriter().print(gson.toJson(okResponse));
+                    return;
+                } else {
+                    RestResponse notFound = RestResponse.NotFound(createMeta(null, "null"), "Cart not found");
+                    resp.setStatus(HttpServletResponse.SC_NOT_FOUND);
+                    resp.getWriter().print(gson.toJson(notFound));
+                    return;
+                }
             }
 
             Cart cart = null;
@@ -167,7 +244,8 @@ public class CartServlet extends HttpServlet {
             }
             meta.setServerTime(System.currentTimeMillis());
             meta.setDataType(null);
-            RestResponse okResponse = RestResponse.Ok(meta, cart);
+            CartTypeModel cartModel = cart != null ? CartTypeModel.fromCart(cart, baseUrl) : null;
+            RestResponse okResponse = RestResponse.Ok(meta, cartModel);
             resp.setStatus(HttpServletResponse.SC_OK);
             resp.getWriter().print(gson.toJson(okResponse));
             return;
@@ -413,7 +491,7 @@ public class CartServlet extends HttpServlet {
                                 Cart updatedCart = cartDao.getUserActiveCart(userId);
                                 restResponse = RestResponse.Ok(
                                         meta.setDataType("object"),
-                                        updatedCart
+                                        CartTypeModel.fromCart(updatedCart)
                                 );
                             }
                         } catch (SQLException ex) {
@@ -539,7 +617,7 @@ public class CartServlet extends HttpServlet {
                                 }
                                 restResponse = RestResponse.Ok(
                                         createMeta("Drop Cart Item", "object"),
-                                        updatedCart
+                                        CartTypeModel.fromCart(updatedCart)
                                 );
                             }
                         }
@@ -556,12 +634,14 @@ public class CartServlet extends HttpServlet {
                         cart.setPrice(0.0);
                         updatedCart = cart;
                     }
-                    restResponse = RestResponse.Ok(createMeta("Drop Cart", "object"), updatedCart);
+                    restResponse = RestResponse.Ok(createMeta("Drop Cart", "object"), CartTypeModel.fromCart(updatedCart));
                 } else {
-                    restResponse = RestResponse.Ok(createMeta("Drop Cart", "object"), cart);
+                    restResponse = RestResponse.Ok(createMeta("Drop Cart", "object"), CartTypeModel.fromCart(cart));
                 }
             }
         } catch (SQLException ex) {
+            restResponse = RestResponse.ErrorInternal(createMeta("Drop Cart Item", "null"), null);
+        } catch (Exception ex) {
             restResponse = RestResponse.ErrorInternal(createMeta("Drop Cart Item", "null"), null);
         }
 
