@@ -8,6 +8,8 @@ import java.util.Locale;
 import java.util.Objects;
 import step.learning.java231web.data.dto.Cart;
 import step.learning.java231web.data.dto.CartItem;
+import step.learning.java231web.data.dto.Product;
+import step.learning.java231web.data.dto.ProductVersion;
 
 public class CartTypeModel {
     public static final SimpleDateFormat dateFormat = new SimpleDateFormat(
@@ -83,18 +85,29 @@ public class CartTypeModel {
         if (cart.getCartItems() != null) {
             for (CartItem ci : cart.getCartItems()) {
                 if (ci == null) continue;
-                if (ci.getProduct() != null) {
-                    ci.setProduct(ci.getProduct());
-                    if (ci.getProduct().getImageUrl() != null) {
-                        ci.getProduct().setImageUrl(fixImageUrl(ci.getProduct().getImageUrl(), host));
+                Product p = ci.getProduct();
+                ProductVersion pv = ci.getProductVersion();
+
+                if (pv != null) {
+                    if (pv.getImageUrl() == null || pv.getImageUrl().trim().isEmpty() || "null".equals(pv.getImageUrl())) {
+                        if (p != null && p.getImageUrl() != null) {
+                            pv.setImageUrl(p.getImageUrl());
+                        } else {
+                            pv.setImageUrl("default.webp");
+                        }
                     }
-                }
-                if (ci.getProductVersion() != null) {
-                    ci.setProductVersion(ci.getProductVersion());
-                    if (ci.getProductVersion().getImageUrl() != null) {
-                        ci.getProductVersion().setImageUrl(fixImageUrl(ci.getProductVersion().getImageUrl(), host));
+                    pv.setImageUrl(fixImageUrl(pv.getImageUrl(), host));
+                    if (pv.getProduct() != null) {
+                        pv.getProduct().setImageUrl(fixImageUrl(pv.getProduct().getImageUrl(), host));
                     }
+                    ci.setProductVersion(pv);
                 }
+
+                if (p != null) {
+                    p.setImageUrl(fixImageUrl(p.getImageUrl(), host));
+                    ci.setProduct(p);
+                }
+
                 preparedItems.add(ci);
             }
         }

@@ -203,6 +203,7 @@ public class CartServlet extends HttpServlet {
             if (pathInfo != null) {
                 String cleanPath = pathInfo.startsWith("/") ? pathInfo.substring(1) : pathInfo;
                 if (cleanPath.endsWith("/")) cleanPath = cleanPath.substring(0, cleanPath.length() - 1);
+                if (cleanPath.toLowerCase().startsWith("id/")) cleanPath = cleanPath.substring(3);
                 if (!cleanPath.isEmpty() && !cleanPath.equalsIgnoreCase("history") &&
                         !cleanPath.equalsIgnoreCase("ordered") && !cleanPath.equalsIgnoreCase("dropped")) {
                     targetCartId = cleanPath;

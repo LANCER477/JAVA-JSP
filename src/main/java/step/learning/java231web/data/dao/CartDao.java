@@ -665,25 +665,13 @@ public class CartDao {
                                                     ci.setProductVersion(productVersionDao.getById(ci.getProductVersionId()));
                                                 } catch (Exception ignored) {}
                                             }
-                                            if (ci.getProduct() == null && ci.getProductVersion() != null && ci.getProductVersion().getProduct() != null) {
-                                                ci.setProduct(ci.getProductVersion().getProduct());
-                                            }
                                             if (ci.getProduct() == null) {
                                                 Product fallback = new Product();
                                                 fallback.setId(ci.getProductId() != null ? ci.getProductId() : ci.getId());
                                                 fallback.setTitle("Товар " + (ci.getProductVersion() != null && ci.getProductVersion().getTitleAddon() != null ? ci.getProductVersion().getTitleAddon() : ""));
                                                 fallback.setPrice(ci.getPrice());
-                                                fallback.setImageUrl("default-product.webp");
+                                                fallback.setImageUrl("https://images.unsplash.com/photo-1527443224154-c4a3942d3acf?w=300");
                                                 ci.setProduct(fallback);
-                                            }
-                                            if (ci.getProductVersion() == null) {
-                                                ProductVersion fallbackPv = new ProductVersion();
-                                                fallbackPv.setId(ci.getProductVersionId() != null ? ci.getProductVersionId() : ci.getId());
-                                                fallbackPv.setProductId(ci.getProduct().getId());
-                                                fallbackPv.setTitleAddon("Базова версія");
-                                                fallbackPv.setImageUrl("default-version.webp");
-                                                fallbackPv.setPrice(ci.getPrice());
-                                                ci.setProductVersion(fallbackPv);
                                             }
                                             c.getCartItems().add(ci);
                                         }
@@ -712,24 +700,14 @@ public class CartDao {
             item1.setProductVersionId("a6b32044-b221-4333-8bfa-627b972333f9");
             item1.setQuantity(3);
             item1.setPrice(7497.0);
+            item1.setProductVersion(null);
             Product p1 = new Product();
             p1.setId("29cc99c6-ab15-4a6a-8e19-12b91244401a");
             p1.setTitle("Ноутбук ASUS ROG Strix G16");
             p1.setDescription("Потужний ігровий ноутбук");
             p1.setPrice(2499.0);
-            p1.setImageUrl("asus-rog.webp");
+            p1.setImageUrl("https://images.unsplash.com/photo-1603302576837-37561b2e2302?w=300");
             item1.setProduct(p1);
-
-            ProductVersion pv1 = new ProductVersion();
-            pv1.setId("a6b32044-b221-4333-8bfa-627b972333f9");
-            pv1.setProductId("29cc99c6-ab15-4a6a-8e19-12b91244401a");
-            pv1.setTitleAddon("16GB RAM / 1TB SSD / RTX 4070");
-            pv1.setDescriptionAddon("Потужна конфігурація для кіберспорту");
-            pv1.setSlugAddon("rtx4070-16gb");
-            pv1.setImageUrl("5f53de1b-4492-4727-b200-39069e9941d8.webp");
-            pv1.setPrice(2499.0);
-            pv1.setStock(10);
-            item1.setProductVersion(pv1);
             cActive.getCartItems().add(item1);
 
             Cart cOrdered = new Cart();
@@ -743,27 +721,17 @@ public class CartDao {
             CartItem item2 = new CartItem();
             item2.setId("dcbbb611-6c27-464b-99c8-f16c0366c311");
             item2.setCartId("a0115c6e-d0ea-11f1-85e2-005056c00001");
-            item2.setProductVersionId("b7c43155-c332-4444-9cfa-738c083444a0");
+            item2.setProductVersionId("a6b32044-b221-4333-8bfa-627b972333f9");
             item2.setQuantity(1);
             item2.setPrice(2499.0);
+            item2.setProductVersion(null);
             Product p2 = new Product();
             p2.setId("30cc99c6-ab15-4a6a-8e19-12b91244401a");
             p2.setTitle("Монітор Samsung Odyssey G7");
             p2.setDescription("Вигнутий ігровий монітор");
             p2.setPrice(2499.0);
-            p2.setImageUrl("samsung-odyssey.webp");
+            p2.setImageUrl("https://images.unsplash.com/photo-1527443224154-c4a3942d3acf?w=300");
             item2.setProduct(p2);
-
-            ProductVersion pv2 = new ProductVersion();
-            pv2.setId("b7c43155-c332-4444-9cfa-738c083444a0");
-            pv2.setProductId("30cc99c6-ab15-4a6a-8e19-12b91244401a");
-            pv2.setTitleAddon("32'' 240Hz WQHD Curved");
-            pv2.setDescriptionAddon("1000R радіус вигину, 1мс GtG");
-            pv2.setSlugAddon("32-curved-240hz");
-            pv2.setImageUrl("odyssey-g7-curved.webp");
-            pv2.setPrice(2499.0);
-            pv2.setStock(15);
-            item2.setProductVersion(pv2);
             cOrdered.getCartItems().add(item2);
 
             Cart cDropped = new Cart();
@@ -780,24 +748,14 @@ public class CartDao {
             item3.setProductVersionId("81fc3041-e5f0-41b7-9420-7b03f5a10316");
             item3.setQuantity(1);
             item3.setPrice(44386.0);
+            item3.setProductVersion(null);
             Product p3 = new Product();
             p3.setId("31cc99c6-ab15-4a6a-8e19-12b91244401a");
             p3.setTitle("Клавіатура HyperX Alloy Origins");
             p3.setDescription("Механічна ігрова клавіатура");
             p3.setPrice(44386.0);
-            p3.setImageUrl("hyperx.webp");
+            p3.setImageUrl("https://images.unsplash.com/photo-1587829741301-dc798b83add3?w=300");
             item3.setProduct(p3);
-
-            ProductVersion pv3 = new ProductVersion();
-            pv3.setId("81fc3041-e5f0-41b7-9420-7b03f5a10316");
-            pv3.setProductId("31cc99c6-ab15-4a6a-8e19-12b91244401a");
-            pv3.setTitleAddon("Red Switches RGB Mechanical");
-            pv3.setDescriptionAddon("Лінійні швидкі перемикачі HyperX Red");
-            pv3.setSlugAddon("hyperx-red-switches");
-            pv3.setImageUrl("hyperx-red-switches.webp");
-            pv3.setPrice(44386.0);
-            pv3.setStock(25);
-            item3.setProductVersion(pv3);
             cDropped.getCartItems().add(item3);
 
             history.add(cActive);

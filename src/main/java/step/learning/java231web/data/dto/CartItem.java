@@ -168,17 +168,7 @@ public class CartItem {
     }
 
     public ProductVersion getProductVersion() {
-        if (productVersion != null) {
-            return productVersion;
-        }
-        ProductVersion fallbackPv = new ProductVersion();
-        fallbackPv.setId(productVersionId != null ? productVersionId : (id != null ? id : "ver-default"));
-        fallbackPv.setProductId(product != null ? product.getId() : (productId != null ? productId : null));
-        fallbackPv.setTitleAddon("Базова версія");
-        fallbackPv.setImageUrl(product != null && product.getImageUrl() != null ? product.getImageUrl() : "default-version.webp");
-        fallbackPv.setPrice(price);
-        this.productVersion = fallbackPv;
-        return this.productVersion;
+        return productVersion;
     }
 
     public CartItem setProductVersion(ProductVersion productVersion) {
