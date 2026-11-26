@@ -882,7 +882,7 @@ public class CartDao {
         if (TokenDao.DEMO_USER_ID.equals(userId)) {
             return getMemoryDemoCart();
         }
-        return null;
+        return memoryCarts.get(userId);
     }
 
     public Cart getActiveCart(String userId) {
@@ -892,8 +892,169 @@ public class CartDao {
             if (TokenDao.DEMO_USER_ID.equals(userId)) {
                 return getMemoryDemoCart();
             }
+            return memoryCarts.get(userId);
+        }
+    }
+
+    public Cart findCartByIdForUser(String userId, String cartId) throws SQLException {
+        if (cartId == null || cartId.trim().isEmpty()) {
             return null;
         }
+        String cleanId = cartId.trim();
+        Cart found = getCartById(cleanId);
+        if (found != null) {
+            return found;
+        }
+        if (userId != null) {
+            List<Cart> history = getUserCartHistory(userId);
+            if (history != null) {
+                for (Cart c : history) {
+                    if (c != null && cleanId.equalsIgnoreCase(c.getId())) {
+                        return c;
+                    }
+                }
+            }
+        }
+        return null;
+    }
+
+    public Cart repeatCart(String userId, Cart sourceCart) throws SQLException {
+        if (userId == null || sourceCart == null) {
+            return null;
+        }
+        ensureInstalled();
+        Cart activeCart = getOrCreateActiveCart(userId);
+        if (activeCart == null) {
+            activeCart = createActiveCartForUser(userId);
+        }
+        String activeCartId = activeCart.getId();
+
+        List<CartItem> sourceItems = sourceCart.getCartItems();
+        if (sourceItems != null && !sourceItems.isEmpty()) {
+            if (dbService != null) {
+                try (Connection conn = dbService.getConnection()) {
+                    for (CartItem srcItem : sourceItems) {
+                        if (srcItem == null) continue;
+                        int addQty = Math.max(1, srcItem.getQuantity());
+                        String pvId = srcItem.getProductVersionId();
+                        String pId = srcItem.getProductId();
+                        if (pId == null && srcItem.getProduct() != null) {
+                            pId = srcItem.getProduct().getId();
+                        }
+                        if (pId == null && srcItem.getProductVersion() != null && srcItem.getProductVersion().getProductId() != null) {
+                            pId = srcItem.getProductVersion().getProductId().toString();
+                        }
+                        double unitPrice = srcItem.getPrice();
+                        if (unitPrice <= 0 && srcItem.getProductVersion() != null) {
+                            unitPrice = srcItem.getProductVersion().getPrice();
+                        }
+
+                        String existingItemId = null;
+                        if (pvId != null && !pvId.trim().isEmpty()) {
+                            String checkSql = "SELECT cart_item_id FROM cart_items WHERE cart_id = ? AND product_version_id = ?";
+                            try (PreparedStatement checkPrep = conn.prepareStatement(checkSql)) {
+                                checkPrep.setString(1, activeCartId);
+                                checkPrep.setString(2, pvId);
+                                try (ResultSet rs = checkPrep.executeQuery()) {
+                                    if (rs.next()) {
+                                        existingItemId = rs.getString("cart_item_id");
+                                    }
+                                }
+                            }
+                        } else if (pId != null && !pId.trim().isEmpty()) {
+                            String checkSql = "SELECT cart_item_id FROM cart_items WHERE cart_id = ? AND product_id = ? AND product_version_id IS NULL";
+                            try (PreparedStatement checkPrep = conn.prepareStatement(checkSql)) {
+                                checkPrep.setString(1, activeCartId);
+                                checkPrep.setString(2, pId);
+                                try (ResultSet rs = checkPrep.executeQuery()) {
+                                    if (rs.next()) {
+                                        existingItemId = rs.getString("cart_item_id");
+                                    }
+                                }
+                            }
+                        }
+
+                        if (existingItemId != null) {
+                            String updateSql = "UPDATE cart_items SET cnt = cnt + ? WHERE cart_item_id = ?";
+                            try (PreparedStatement updPrep = conn.prepareStatement(updateSql)) {
+                                updPrep.setInt(1, addQty);
+                                updPrep.setString(2, existingItemId);
+                                updPrep.executeUpdate();
+                            }
+                        } else {
+                            String newItemId = UUID.randomUUID().toString();
+                            String insertSql = "INSERT INTO cart_items (cart_item_id, cart_id, product_id, product_version_id, cnt, price) VALUES (?, ?, ?, ?, ?, ?)";
+                            try (PreparedStatement insPrep = conn.prepareStatement(insertSql)) {
+                                insPrep.setString(1, newItemId);
+                                insPrep.setString(2, activeCartId);
+                                insPrep.setString(3, pId);
+                                insPrep.setString(4, pvId);
+                                insPrep.setInt(5, addQty);
+                                insPrep.setDouble(6, unitPrice);
+                                insPrep.executeUpdate();
+                            }
+                        }
+                    }
+                    recalculateCartPrice(activeCartId);
+                    Cart refreshed = getUserActiveCart(userId);
+                    if (refreshed != null) {
+                        return refreshed;
+                    }
+                } catch (SQLException ex) {
+                    logger.log(Level.WARNING, "repeatCart DB error: " + ex.getMessage(), ex);
+                    if (!TokenDao.DEMO_USER_ID.equals(userId)) {
+                        throw ex;
+                    }
+                }
+            }
+
+            // In-memory repeat fallback (for tests or when DB is unavailable)
+            if (activeCart.getCartItems() == null) {
+                activeCart.setCartItems(new ArrayList<>());
+            }
+            for (CartItem srcItem : sourceItems) {
+                if (srcItem == null) continue;
+                int addQty = Math.max(1, srcItem.getQuantity());
+                String pvId = srcItem.getProductVersionId();
+                String pId = srcItem.getProductId();
+                if (pId == null && srcItem.getProduct() != null) {
+                    pId = srcItem.getProduct().getId();
+                }
+
+                CartItem existing = null;
+                for (CartItem ci : activeCart.getCartItems()) {
+                    if (pvId != null && pvId.equalsIgnoreCase(ci.getProductVersionId())) {
+                        existing = ci;
+                        break;
+                    }
+                    if (pvId == null && pId != null && pId.equalsIgnoreCase(ci.getProductId()) && ci.getProductVersionId() == null) {
+                        existing = ci;
+                        break;
+                    }
+                }
+
+                if (existing != null) {
+                    existing.setQuantity(existing.getQuantity() + addQty);
+                } else {
+                    CartItem cloned = new CartItem();
+                    cloned.setId(UUID.randomUUID().toString());
+                    cloned.setCartId(activeCartId);
+                    cloned.setProductId(pId);
+                    cloned.setProductVersionId(pvId);
+                    cloned.setQuantity(addQty);
+                    cloned.setPrice(srcItem.getPrice());
+                    cloned.setProductVersion(srcItem.getProductVersion());
+                    cloned.setProduct(srcItem.getProduct());
+                    activeCart.getCartItems().add(cloned);
+                }
+            }
+            double total = 0;
+            for (CartItem ci : activeCart.getCartItems()) {
+                total += ci.getPrice() * ci.getQuantity();
+            }
+            activeCart.setPrice(total);
+        }
+        return activeCart;
     }
 
     public String addToCart(String userId, ProductVersion pv) throws SQLException {
@@ -979,7 +1140,7 @@ public class CartDao {
         String cartId = UUID.randomUUID().toString();
         if (dbService != null) {
             try (Connection conn = dbService.getConnection();
-                 PreparedStatement prep = conn.prepareStatement("INSERT INTO carts (cart_id, user_id, cart_status, cart_price) VALUES (?, ?, 0, 0)")) {
+                 PreparedStatement prep = conn.prepareStatement("INSERT INTO carts (cart_id, user_id, cart_status, cart_price) VALUES (?, ?, NULL, 0)")) {
                 prep.setString(1, cartId);
                 prep.setString(2, userId);
                 prep.executeUpdate();
@@ -990,10 +1151,11 @@ public class CartDao {
         Cart c = new Cart();
         c.setId(cartId);
         c.setUserId(userId);
-        c.setStatus(0);
+        c.setStatus(null);
+        c.setCreateDt(new Date());
         c.setPrice(0.0);
         c.setCartItems(new ArrayList<>());
-        if (TokenDao.DEMO_USER_ID.equals(userId)) {
+        if (TokenDao.DEMO_USER_ID.equals(userId) || dbService == null) {
             memoryCarts.put(userId, c);
         }
         return c;

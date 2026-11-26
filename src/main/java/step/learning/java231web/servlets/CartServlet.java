@@ -199,6 +199,75 @@ public class CartServlet extends HttpServlet {
                 return;
             }
 
+            boolean isRepeat = false;
+            String repeatCartId = null;
+            if (pathInfo != null) {
+                String trimmedPath = pathInfo.startsWith("/") ? pathInfo.substring(1) : pathInfo;
+                if (trimmedPath.toLowerCase().startsWith("repeat/")) {
+                    isRepeat = true;
+                    repeatCartId = trimmedPath.substring(7);
+                    if (repeatCartId.endsWith("/")) {
+                        repeatCartId = repeatCartId.substring(0, repeatCartId.length() - 1);
+                    }
+                    repeatCartId = repeatCartId.trim();
+                } else if (trimmedPath.equalsIgnoreCase("repeat") || trimmedPath.equalsIgnoreCase("repeat/")) {
+                    isRepeat = true;
+                    repeatCartId = req.getParameter("id");
+                    if (repeatCartId != null) {
+                        repeatCartId = repeatCartId.trim();
+                    }
+                }
+            }
+
+            if (isRepeat) {
+                if (repeatCartId == null || repeatCartId.isEmpty()) {
+                    RestResponse badReq = RestResponse.QueryParamMissed(
+                            createMeta("Repeat Cart", "string"),
+                            "Cart id is required for repeat"
+                    );
+                    resp.setStatus(HttpServletResponse.SC_BAD_REQUEST);
+                    resp.getWriter().print(gson.toJson(badReq));
+                    return;
+                }
+                Cart sourceCart = null;
+                if (cartDao != null) {
+                    try {
+                        sourceCart = cartDao.findCartByIdForUser(userToken.getUserId(), repeatCartId);
+                    } catch (Exception ignored) {}
+                }
+                if (sourceCart == null) {
+                    RestResponse notFound = RestResponse.NotFound(createMeta("Repeat Cart", "null"), "Cart not found");
+                    resp.setStatus(HttpServletResponse.SC_NOT_FOUND);
+                    resp.getWriter().print(gson.toJson(notFound));
+                    return;
+                }
+                if (sourceCart.getUserId() != null && !userToken.getUserId().equalsIgnoreCase(sourceCart.getUserId())) {
+                    RestResponse forbidden = RestResponse.Forbidden(createMeta("Repeat Cart", "string"), "Cart belongs to another user");
+                    resp.setStatus(HttpServletResponse.SC_FORBIDDEN);
+                    resp.getWriter().print(gson.toJson(forbidden));
+                    return;
+                }
+                Cart repeatedCart = null;
+                if (cartDao != null) {
+                    try {
+                        repeatedCart = cartDao.repeatCart(userToken.getUserId(), sourceCart);
+                    } catch (Exception ex) {
+                        RestResponse errResp = RestResponse.ErrorInternal(createMeta("Repeat Cart", "null"), ex.getMessage());
+                        resp.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
+                        resp.getWriter().print(gson.toJson(errResp));
+                        return;
+                    }
+                }
+                RestMeta repeatMeta = createMeta(null, "object");
+                java.util.Map<String, Object> repeatParams = new java.util.LinkedHashMap<>();
+                repeatParams.put("id", repeatCartId);
+                repeatMeta.setParameters(repeatParams);
+                RestResponse okResponse = RestResponse.Ok(repeatMeta, CartTypeModel.fromCart(repeatedCart, baseUrl));
+                resp.setStatus(HttpServletResponse.SC_OK);
+                resp.getWriter().print(gson.toJson(okResponse));
+                return;
+            }
+
             String targetCartId = null;
             if (pathInfo != null) {
                 String cleanPath = pathInfo.startsWith("/") ? pathInfo.substring(1) : pathInfo;

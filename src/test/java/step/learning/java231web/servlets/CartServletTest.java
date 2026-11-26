@@ -1397,4 +1397,95 @@ public class CartServletTest {
         servlet.service(request, response);
         assertEquals(401, statusCode.get());
     }
+
+    @Test
+    public void testRepeatCartReturns200AndClonesItemsWithParametersMeta() throws Exception {
+        CartDao fakeCartDao = new CartDao(null);
+        TokenDao fakeTokenDao = new TokenDao(null);
+        Gson gson = CartServlet.buildCartGson();
+        CartServlet servlet = new CartServlet(fakeCartDao, fakeTokenDao, null, gson);
+
+        StringWriter stringWriter = new StringWriter();
+        PrintWriter printWriter = new PrintWriter(stringWriter);
+        AtomicInteger statusCode = new AtomicInteger(0);
+
+        String sourceOrderId = "a0115c6e-d0ea-11f1-85e2-005056c00001";
+
+        HttpServletRequest request = (HttpServletRequest) Proxy.newProxyInstance(
+                HttpServletRequest.class.getClassLoader(),
+                new Class<?>[]{HttpServletRequest.class},
+                (proxy, method, args) -> {
+                    if ("getMethod".equals(method.getName())) return "GET";
+                    if ("getPathInfo".equals(method.getName())) return "/repeat/" + sourceOrderId;
+                    if ("getHeader".equals(method.getName()) && args != null && args.length > 0 &&
+                            "Authorization".equalsIgnoreCase(args[0].toString())) {
+                        return "Bearer " + TokenDao.DEMO_TOKEN_ID;
+                    }
+                    if ("getScheme".equals(method.getName())) return "http";
+                    if ("getServerName".equals(method.getName())) return "localhost";
+                    if ("getServerPort".equals(method.getName())) return 8080;
+                    if ("getContextPath".equals(method.getName())) return "/java231web";
+                    if ("getWriter".equals(method.getName())) return printWriter;
+                    return null;
+                }
+        );
+        HttpServletResponse response = (HttpServletResponse) Proxy.newProxyInstance(
+                HttpServletResponse.class.getClassLoader(),
+                new Class<?>[]{HttpServletResponse.class},
+                (proxy, method, args) -> {
+                    if ("setStatus".equals(method.getName()) && args != null && args.length > 0) {
+                        statusCode.set((Integer) args[0]);
+                    }
+                    if ("getWriter".equals(method.getName())) return printWriter;
+                    return null;
+                }
+        );
+
+        servlet.service(request, response);
+        assertEquals(200, statusCode.get());
+        String body = stringWriter.toString();
+        assertTrue(body.contains(sourceOrderId), "meta.parameters should contain source cart id");
+        assertTrue(body.contains("cartItems"), "response should contain cartItems");
+    }
+
+    @Test
+    public void testRepeatCartNotFoundReturns404() throws Exception {
+        CartDao fakeCartDao = new CartDao(null);
+        TokenDao fakeTokenDao = new TokenDao(null);
+        Gson gson = CartServlet.buildCartGson();
+        CartServlet servlet = new CartServlet(fakeCartDao, fakeTokenDao, null, gson);
+
+        StringWriter stringWriter = new StringWriter();
+        PrintWriter printWriter = new PrintWriter(stringWriter);
+        AtomicInteger statusCode = new AtomicInteger(0);
+
+        HttpServletRequest request = (HttpServletRequest) Proxy.newProxyInstance(
+                HttpServletRequest.class.getClassLoader(),
+                new Class<?>[]{HttpServletRequest.class},
+                (proxy, method, args) -> {
+                    if ("getMethod".equals(method.getName())) return "GET";
+                    if ("getPathInfo".equals(method.getName())) return "/repeat/non-existent-cart-id";
+                    if ("getHeader".equals(method.getName()) && args != null && args.length > 0 &&
+                            "Authorization".equalsIgnoreCase(args[0].toString())) {
+                        return "Bearer " + TokenDao.DEMO_TOKEN_ID;
+                    }
+                    if ("getWriter".equals(method.getName())) return printWriter;
+                    return null;
+                }
+        );
+        HttpServletResponse response = (HttpServletResponse) Proxy.newProxyInstance(
+                HttpServletResponse.class.getClassLoader(),
+                new Class<?>[]{HttpServletResponse.class},
+                (proxy, method, args) -> {
+                    if ("setStatus".equals(method.getName()) && args != null && args.length > 0) {
+                        statusCode.set((Integer) args[0]);
+                    }
+                    if ("getWriter".equals(method.getName())) return printWriter;
+                    return null;
+                }
+        );
+
+        servlet.service(request, response);
+        assertEquals(404, statusCode.get());
+    }
 }
